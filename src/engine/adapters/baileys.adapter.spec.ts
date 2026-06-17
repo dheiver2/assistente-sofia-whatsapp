@@ -141,3 +141,119 @@ describe('BaileysAdapter capability gating', () => {
   });
 });
 
+describe('BaileysAdapter messaging', () => {
+  beforeEach(() => {
+    fakeSock.user = { id: '628999:1@s.whatsapp.net', name: 'Me' };
+    jest.clearAllMocks();
+  });
+
+  const readyAdapter = async (over: Partial<EngineEventCallbacks> = {}): Promise<BaileysAdapter> => {
+    const adapter = newAdapter();
+    await adapter.initialize(over);
+    fakeSock.fire('connection.update', { connection: 'open' });
+    return adapter;
+  };
+
+  it('sendTextMessage calls sock.sendMessage(jid, { text }) and returns the message id', async () => {
+    fakeSock.sendMessage.mockResolvedValue({ key: { id: 'OUT1' }, messageTimestamp: 1700000001 });
+    const adapter = await readyAdapter();
+    const res = await adapter.sendTextMessage('628111@s.whatsapp.net', 'hello');
+    expect(fakeSock.sendMessage).toHaveBeenCalledWith('628111@s.whatsapp.net', { text: 'hello' });
+    expect(res).toEqual({ id: 'OUT1', timestamp: 1700000001 });
+  });
+
+  it('getNumberId resolves via onWhatsApp and returns the jid when it exists', async () => {
+    fakeSock.onWhatsApp.mockResolvedValue([{ jid: '628111@s.whatsapp.net', exists: true }]);
+    const adapter = await readyAdapter();
+    await expect(adapter.getNumberId('628111')).resolves.toBe('628111@s.whatsapp.net');
+    await expect(adapter.checkNumberExists('628111')).resolves.toBe(true);
+  });
+
+  it('getNumberId returns null when the number is not on WhatsApp', async () => {
+    fakeSock.onWhatsApp.mockResolvedValue([{ jid: '628111@s.whatsapp.net', exists: false }]);
+    const adapter = await readyAdapter();
+    await expect(adapter.getNumberId('628111')).resolves.toBeNull();
+    await expect(adapter.checkNumberExists('628111')).resolves.toBe(false);
+  });
+
+  it('sendChatState maps typing -> composing presence', async () => {
+    const adapter = await readyAdapter();
+    await adapter.sendChatState('628111@s.whatsapp.net', 'typing');
+    expect(fakeSock.sendPresenceUpdate).toHaveBeenCalledWith('composing', '628111@s.whatsapp.net');
+  });
+
+  it('messaging methods throw EngineNotReadyError before the connection is open', async () => {
+    const adapter = newAdapter();
+    await adapter.initialize({});
+    await expect(adapter.sendTextMessage('x', 'y')).rejects.toBeInstanceOf(EngineNotReadyError);
+  });
+});
+
+describe('BaileysAdapter inbound fan-out', () => {
+  const baileys = jest.requireMock('@whiskeysockets/baileys') as { getContentType: jest.Mock };
+
+  beforeEach(() => {
+    fakeSock.user = { id: '628999:1@s.whatsapp.net', name: 'Me' };
+    jest.clearAllMocks();
+    baileys.getContentType.mockReturnValue('conversation');
+  });
+
+  it('routes an inbound (not fromMe) message to onMessage with a neutral shape', async () => {
+    const onMessage = jest.fn();
+    const adapter = newAdapter();
+    await adapter.initialize({ onMessage });
+    fakeSock.fire('messages.upsert', {
+      type: 'notify',
+      messages: [
+        {
+          key: { remoteJid: '628111@s.whatsapp.net', fromMe: false, id: 'IN1' },
+          message: { conversation: 'hi there' },
+          messageTimestamp: 1700000002,
+          pushName: 'Alice',
+        },
+      ],
+    });
+    expect(onMessage).toHaveBeenCalledTimes(1);
+    const msg = onMessage.mock.calls[0][0] as { id: string; body: string; type: string; fromMe: boolean };
+    expect(msg).toMatchObject({ id: 'IN1', body: 'hi there', type: 'text', fromMe: false });
+  });
+
+  it('routes a fromMe message to onMessageCreate (outgoing), not onMessage', async () => {
+    const onMessage = jest.fn();
+    const onMessageCreate = jest.fn();
+    const adapter = newAdapter();
+    await adapter.initialize({ onMessage, onMessageCreate });
+    fakeSock.fire('messages.upsert', {
+      type: 'notify',
+      messages: [
+        {
+          key: { remoteJid: '628111@s.whatsapp.net', fromMe: true, id: 'OUT2' },
+          message: { conversation: 'sent from phone' },
+          messageTimestamp: 1700000003,
+        },
+      ],
+    });
+    expect(onMessageCreate).toHaveBeenCalledTimes(1);
+    expect(onMessage).not.toHaveBeenCalled();
+  });
+
+  it('ignores append (history) upserts', async () => {
+    const onMessage = jest.fn();
+    const adapter = newAdapter();
+    await adapter.initialize({ onMessage });
+    fakeSock.fire('messages.upsert', {
+      type: 'append',
+      messages: [{ key: { remoteJid: '628111@s.whatsapp.net', fromMe: false, id: 'OLD' }, message: { conversation: 'old' } }],
+    });
+    expect(onMessage).not.toHaveBeenCalled();
+  });
+
+  it('emits onMessageAck from messages.update with a neutral status', async () => {
+    const onMessageAck = jest.fn();
+    const adapter = newAdapter();
+    await adapter.initialize({ onMessageAck });
+    fakeSock.fire('messages.update', [{ key: { id: 'OUT1' }, update: { status: 3 } }]);
+    expect(onMessageAck).toHaveBeenCalledWith('OUT1', 'delivered');
+  });
+});
+

@@ -2,9 +2,11 @@ import * as path from 'path';
 import makeWASocket, {
   DisconnectReason,
   fetchLatestBaileysVersion,
+  getContentType,
   useMultiFileAuthState,
 } from '@whiskeysockets/baileys';
-import type { WASocket } from '@whiskeysockets/baileys';
+import type { WAMessage, WASocket } from '@whiskeysockets/baileys';
+import { buildIncomingMessageFromBaileys, mapBaileysStatus } from './baileys-message-mapper';
 import type { ILogger } from '@whiskeysockets/baileys/lib/Utils/logger.js';
 import {
   ChatState,
@@ -104,7 +106,8 @@ export class BaileysAdapter implements IWhatsAppEngine {
 
     sock.ev.on('creds.update', saveCreds);
     sock.ev.on('connection.update', update => this.handleConnectionUpdate(update));
-    // Message listeners are wired in the messaging slice (Task 5).
+    sock.ev.on('messages.upsert', event => this.handleMessagesUpsert(event));
+    sock.ev.on('messages.update', updates => this.handleMessagesUpdate(updates));
   }
 
   private handleConnectionUpdate(update: {
@@ -214,22 +217,32 @@ export class BaileysAdapter implements IWhatsAppEngine {
     return this.pushName;
   }
 
-  // ----- Messaging (implemented in the messaging slice; gated until then) -----
+  // ----- Messaging -----
 
-  sendTextMessage(_chatId: string, _text: string): Promise<MessageResult> {
-    return this.unsupported('sendTextMessage');
+  async sendTextMessage(chatId: string, text: string): Promise<MessageResult> {
+    this.ensureReady();
+    const sent = await this.sock!.sendMessage(chatId, { text });
+    return {
+      id: sent?.key?.id ?? '',
+      timestamp: this.toUnixSeconds(sent?.messageTimestamp),
+    };
   }
 
-  checkNumberExists(_number: string): Promise<boolean> {
-    return this.unsupported('checkNumberExists');
+  async checkNumberExists(number: string): Promise<boolean> {
+    return (await this.getNumberId(number)) !== null;
   }
 
-  getNumberId(_number: string): Promise<string | null> {
-    return this.unsupported('getNumberId');
+  async getNumberId(number: string): Promise<string | null> {
+    this.ensureReady();
+    const results = await this.sock!.onWhatsApp(number);
+    const hit = results?.[0];
+    return hit?.exists ? hit.jid : null;
   }
 
-  sendChatState(_chatId: string, _state: ChatState): Promise<void> {
-    return this.unsupported('sendChatState');
+  async sendChatState(chatId: string, state: ChatState): Promise<void> {
+    this.ensureReady();
+    const presence = state === 'typing' ? 'composing' : state === 'recording' ? 'recording' : 'paused';
+    await this.sock!.sendPresenceUpdate(presence, chatId);
   }
 
   // ----- Gated: not supported by this minimal slice (no store) -----
@@ -401,6 +414,64 @@ export class BaileysAdapter implements IWhatsAppEngine {
   }
 
   // ----- Helpers -----
+
+  private handleMessagesUpsert(event: { messages: WAMessage[]; type: string }): void {
+    // Only live messages ('notify'); 'append' is history sync, which this storeless slice skips.
+    if (event.type !== 'notify') {
+      return;
+    }
+    for (const msg of event.messages) {
+      if (!msg.message || !msg.key?.remoteJid) {
+        continue; // protocol/empty messages carry no neutral content
+      }
+      const incoming = this.mapMessage(msg);
+      if (msg.key.fromMe) {
+        this.callbacks.onMessageCreate?.(incoming);
+      } else {
+        this.callbacks.onMessage?.(incoming);
+      }
+    }
+  }
+
+  private handleMessagesUpdate(updates: Array<{ key?: { id?: string | null }; update?: { status?: number | null } }>): void {
+    for (const u of updates) {
+      const status = mapBaileysStatus(u.update?.status);
+      if (status && u.key?.id) {
+        this.callbacks.onMessageAck?.(u.key.id, status);
+      }
+    }
+  }
+
+  private mapMessage(msg: WAMessage): IncomingMessage {
+    const content = msg.message ?? {};
+    const contentType = getContentType(msg.message ?? undefined);
+    const body = content.conversation ?? content.extendedTextMessage?.text ?? '';
+    return buildIncomingMessageFromBaileys({
+      id: msg.key.id ?? '',
+      remoteJid: msg.key.remoteJid!,
+      fromMe: msg.key.fromMe === true,
+      participant: msg.key.participant ?? undefined,
+      body,
+      contentType,
+      isPtt: content.audioMessage?.ptt === true,
+      timestamp: this.toUnixSeconds(msg.messageTimestamp),
+      pushName: msg.pushName ?? undefined,
+      selfJid: this.normalizedSelfJid(),
+    });
+  }
+
+  private normalizedSelfJid(): string {
+    const phone = this.extractPhone(this.sock?.user?.id);
+    return phone ? `${phone}@s.whatsapp.net` : '';
+  }
+
+  /** Baileys timestamps are `number | Long`; normalize to unix seconds. */
+  private toUnixSeconds(ts: number | { toNumber(): number } | null | undefined): number {
+    if (ts == null) {
+      return Math.floor(Date.now() / 1000);
+    }
+    return typeof ts === 'number' ? ts : ts.toNumber();
+  }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private unsupported(method: string): Promise<any> {
