@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { Plus, QrCode, RefreshCw, Trash2, Eye, Loader2, Play, Square, X, Search, Filter, Skull, Bot } from 'lucide-react';
-import { sessionApi, type Session, type AiConfig } from '../services/api';
+import { Plus, QrCode, RefreshCw, Trash2, Eye, Loader2, Play, Square, X, Search, Filter, Skull, Bot, Send, CheckCircle2, Circle } from 'lucide-react';
+import { sessionApi, messageApi, type Session, type AiConfig } from '../services/api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useToast } from '../components/Toast';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -26,6 +26,16 @@ export function Sessions() {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [killConfirmId, setKillConfirmId] = useState<string | null>(null);
+  // Envio rápido de mensagem
+  const [quickSendSession, setQuickSendSession] = useState<Session | null>(null);
+  const [quickSendTo, setQuickSendTo] = useState('');
+  const [quickSendText, setQuickSendText] = useState('');
+  const [quickSending, setQuickSending] = useState(false);
+
+  // Onboarding após criar sessão
+  const [onboardingSession, setOnboardingSession] = useState<Session | null>(null);
+  const [onboardingStep, setOnboardingStep] = useState(0);
+
   // IA de atendimento por sessão (uma empresa = uma sessão)
   const [aiSession, setAiSession] = useState<Session | null>(null);
   const [aiConfig, setAiConfig] = useState<AiConfig>({});
@@ -48,6 +58,23 @@ export function Sessions() {
     },
     [],
   );
+
+  const handleQuickSend = async () => {
+    if (!quickSendSession || !quickSendTo.trim() || !quickSendText.trim()) return;
+    setQuickSending(true);
+    try {
+      const chatId = quickSendTo.replace(/\D/g, '') + '@c.us';
+      await messageApi.sendText(quickSendSession.id, chatId, quickSendText);
+      toast.success('Mensagem enviada!', `Para ${quickSendTo}`);
+      setQuickSendSession(null);
+      setQuickSendTo('');
+      setQuickSendText('');
+    } catch (e) {
+      toast.error('Erro ao enviar', e instanceof Error ? e.message : 'Falha');
+    } finally {
+      setQuickSending(false);
+    }
+  };
 
   const saveAiConfig = useCallback(async () => {
     if (!aiSession) return;
@@ -169,6 +196,8 @@ export function Sessions() {
       setSessions([...sessions, newSession]);
       setNewSessionName('');
       setShowCreateModal(false);
+      setOnboardingSession(newSession);
+      setOnboardingStep(0);
       toast.success(t('sessions.create.successTitle'), t('sessions.create.successDesc', { name: newSession.name }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : t('sessions.create.errorDefault');
@@ -637,6 +666,87 @@ export function Sessions() {
         </div>
       )}
 
+      {/* Modal de envio rápido */}
+      {quickSendSession && (
+        <div className="modal-overlay" onClick={() => setQuickSendSession(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2><Send size={16} style={{ verticalAlign: 'text-bottom', marginRight: 6 }} />Enviar mensagem — {quickSendSession.name}</h2>
+              <button className="btn-icon" onClick={() => setQuickSendSession(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Número (com DDD)</label>
+                <input
+                  type="text"
+                  placeholder="5511999990001"
+                  value={quickSendTo}
+                  onChange={e => setQuickSendTo(e.target.value)}
+                  autoFocus
+                />
+                <small>Somente dígitos ou com + e traços — o sistema normaliza automaticamente.</small>
+              </div>
+              <div className="form-group">
+                <label>Mensagem</label>
+                <textarea
+                  rows={4}
+                  placeholder="Digite a mensagem aqui..."
+                  value={quickSendText}
+                  onChange={e => setQuickSendText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) void handleQuickSend(); }}
+                />
+                <small>Ctrl+Enter para enviar</small>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setQuickSendSession(null)}>Cancelar</button>
+              <button
+                className="btn-primary"
+                onClick={() => void handleQuickSend()}
+                disabled={quickSending || !quickSendTo.trim() || !quickSendText.trim()}
+              >
+                {quickSending ? <Loader2 size={15} className="spin" /> : <Send size={15} />} Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal de onboarding após criar sessão */}
+      {onboardingSession && (
+        <div className="modal-overlay" onClick={() => setOnboardingSession(null)}>
+          <div className="modal onboarding-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>🎉 Sessão <strong>{onboardingSession.name}</strong> criada!</h2>
+              <button className="btn-icon" onClick={() => setOnboardingSession(null)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <p style={{ marginBottom: 16, color: 'var(--text-secondary)' }}>
+                Siga os 3 passos para colocar o bot no ar:
+              </p>
+              {[
+                { label: 'Conectar o WhatsApp (escanear QR Code)', action: () => { setOnboardingStep(1); handleShowQR(onboardingSession.id); } },
+                { label: 'Configurar a IA de atendimento (persona, conhecimento, saudação)', action: () => { setOnboardingStep(2); void openAiModal(onboardingSession); } },
+                { label: 'Criar primeira campanha de vendas em Vendas', action: () => { setOnboardingSession(null); window.location.href = '/sales'; } },
+              ].map((step, i) => (
+                <div key={i} className={`onboarding-step ${onboardingStep > i ? 'done' : i === onboardingStep ? 'active' : ''}`}>
+                  {onboardingStep > i ? <CheckCircle2 size={18} className="step-icon done" /> : <Circle size={18} className="step-icon" />}
+                  <div className="step-body">
+                    <span className="step-label">{i + 1}. {step.label}</span>
+                    {i === onboardingStep && (
+                      <button className="btn-sm primary step-btn" onClick={step.action}>Fazer agora</button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setOnboardingSession(null)}>Fechar</button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="sessions-grid">
         {filteredSessions.length === 0 ? (
           <div className="empty-state">
@@ -694,6 +804,12 @@ export function Sessions() {
                   <Eye size={16} />
                   {t('sessions.actions.view')}
                 </button>
+                {canWrite && session.status === 'ready' && (
+                  <button className="btn-action" onClick={() => { setQuickSendSession(session); setQuickSendTo(''); setQuickSendText(''); }} title="Enviar mensagem">
+                    <Send size={16} />
+                    Enviar
+                  </button>
+                )}
                 {canWrite && (
                   <button className="btn-action" onClick={() => void openAiModal(session)} title={t('sessions.ai.configureTitle')}>
                     <Bot size={16} />

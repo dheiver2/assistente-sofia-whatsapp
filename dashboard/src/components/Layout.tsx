@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
+import { sessionApi } from '../services/api';
 import {
   LayoutDashboard,
   Smartphone,
@@ -57,6 +58,14 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
   const themeLabel = t(`theme.${theme}`);
 
   const navItems = allNavItems.filter(item => !item.adminOnly || userRole === 'admin');
+
+  const [readySessions, setReadySessions] = useState(0);
+  useEffect(() => {
+    const check = () => sessionApi.getStats().then(s => setReadySessions(s.ready)).catch(() => {});
+    void check();
+    const tid = setInterval(() => void check(), 30000);
+    return () => clearInterval(tid);
+  }, []);
 
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMobileOpen, setIsMobileOpen] = useState(false);
@@ -177,6 +186,15 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
             );
           })}
         </nav>
+
+        <div className="session-health" title={`${readySessions} sessão(ões) conectada(s)`}>
+          <span className={`health-dot ${readySessions > 0 ? 'online' : 'offline'}`} />
+          {!isCollapsed && (
+            <span className="health-label">
+              {readySessions > 0 ? `${readySessions} conectada${readySessions > 1 ? 's' : ''}` : 'Sem sessão ativa'}
+            </span>
+          )}
+        </div>
 
         <div className="sidebar-footer">
           <div className="language-menu" ref={languageMenuRef}>

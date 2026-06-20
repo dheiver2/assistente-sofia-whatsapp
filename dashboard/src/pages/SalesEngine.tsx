@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Loader2, Plus, Send, Sparkles, Trash2, Database, RefreshCw } from 'lucide-react';
-import { sessionApi, salesApi, type Session, type Campaign, type Outreach, type LeadSource, type SalesLead, type OptOut } from '../services/api';
+import { Loader2, Plus, Send, Sparkles, Trash2, Database, RefreshCw, MessageSquare, X } from 'lucide-react';
+import { sessionApi, salesApi, messageApi, type Session, type Campaign, type Outreach, type LeadSource, type SalesLead, type OptOut } from '../services/api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
@@ -33,6 +33,12 @@ export function SalesEngine() {
   const [metrics, setMetrics] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
   const [optOuts, setOptOuts] = useState<OptOut[]>([]);
+
+  // Mensagem rápida
+  const [quickMsg, setQuickMsg] = useState(false);
+  const [qmPhone, setQmPhone] = useState('');
+  const [qmText, setQmText] = useState('');
+  const [qmBusy, setQmBusy] = useState(false);
 
   // formulários — fonte Postgres
   const [pgName, setPgName] = useState('');
@@ -168,6 +174,23 @@ export function SalesEngine() {
     else toast.error('Falha', r.message);
   };
 
+  const sendQuick = async () => {
+    if (!sessionId || !qmPhone.trim() || !qmText.trim()) return;
+    setQmBusy(true);
+    try {
+      const chatId = qmPhone.replace(/\D/g, '') + '@c.us';
+      await messageApi.sendText(sessionId, chatId, qmText);
+      toast.success('Mensagem enviada!', qmPhone);
+      setQuickMsg(false);
+      setQmPhone('');
+      setQmText('');
+    } catch (e) {
+      toast.error('Erro', e instanceof Error ? e.message : 'Falha ao enviar');
+    } finally {
+      setQmBusy(false);
+    }
+  };
+
   const removeOptOut = async (id: string) => {
     await salesApi.removeOptOut(id);
     setOptOuts(prev => prev.filter(o => o.id !== id));
@@ -188,7 +211,58 @@ export function SalesEngine() {
 
   return (
     <div className="sales-page">
-      <PageHeader title={t('nav.sales')} subtitle="Vendas ativas: a IA lê a base, gera a abordagem e conduz a conversa" />
+      <PageHeader
+        title={t('nav.sales')}
+        subtitle="Vendas ativas: a IA lê a base, gera a abordagem e conduz a conversa"
+        actions={
+          sessionId && (
+            <button className="btn-primary" onClick={() => setQuickMsg(true)}>
+              <MessageSquare size={16} /> Mensagem rápida
+            </button>
+          )
+        }
+      />
+
+      {/* Modal mensagem rápida */}
+      {quickMsg && (
+        <div className="modal-overlay" onClick={() => setQuickMsg(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2><Send size={16} style={{ verticalAlign: 'text-bottom', marginRight: 6 }} />Mensagem rápida</h2>
+              <button className="btn-icon" onClick={() => setQuickMsg(false)}><X size={20} /></button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Número (com código do país)</label>
+                <input
+                  type="text"
+                  placeholder="5551993153058"
+                  value={qmPhone}
+                  onChange={e => setQmPhone(e.target.value)}
+                  autoFocus
+                />
+              </div>
+              <div className="form-group">
+                <label>Mensagem</label>
+                <textarea
+                  rows={5}
+                  placeholder="Digite a mensagem..."
+                  value={qmText}
+                  onChange={e => setQmText(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && e.ctrlKey) void sendQuick(); }}
+                />
+                <small>Ctrl+Enter para enviar · Via sessão: {sessions.find(s => s.id === sessionId)?.name}</small>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setQuickMsg(false)}>Cancelar</button>
+              <button className="btn-primary" onClick={() => void sendQuick()} disabled={qmBusy || !qmPhone.trim() || !qmText.trim()}>
+                {qmBusy ? <Loader2 size={14} className="spin" /> : <Send size={14} />} Enviar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="form-group">
         <label>Empresa (sessão)</label>
