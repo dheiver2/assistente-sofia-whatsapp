@@ -56,6 +56,7 @@
     "label": "Tema: {{value}}"
   },
   "nav": {
+    "home": "Inicio",
     "dashboard": "Panel",
     "sessions": "Sesiones",
     "chats": "Chats",
@@ -66,7 +67,9 @@
     "plugins": "Plugins",
     "logs": "Registros",
     "templates": "Plantillas",
-    "sales": "Sales"
+    "sales": "Sales",
+    "campaigns": "Campañas",
+    "config": "Config"
   },
   "chats": {
     "subtitle": "Envía y responde mensajes de WhatsApp en tiempo real",

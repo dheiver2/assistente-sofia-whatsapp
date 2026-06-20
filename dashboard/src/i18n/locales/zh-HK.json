@@ -56,6 +56,7 @@
     "label": "主題：{{value}}"
   },
   "nav": {
+    "home": "主頁",
     "dashboard": "控制面板",
     "sessions": "工作階段",
     "chats": "聊天",
@@ -66,7 +67,9 @@
     "infrastructure": "基礎架構",
     "plugins": "外掛",
     "logs": "記錄",
-    "sales": "Sales"
+    "sales": "Sales",
+    "campaigns": "行銷活動",
+    "config": "Config"
   },
   "chats": {
     "subtitle": "即時傳送和回覆 WhatsApp 訊息",
@@ -128,7 +131,8 @@
     "footer": "由 Yudhi Armyndharis 及 OpenWA 社群用 ❤️ 打造",
     "version": "v{{version}} · {{date}}"
   },
-  "dashboard": {
+  "home": "主頁",
+    "dashboard": {
     "title": "控制面板",
     "subtitle": "查看你的 WhatsApp 工作階段及活動概覽",
     "stats": {

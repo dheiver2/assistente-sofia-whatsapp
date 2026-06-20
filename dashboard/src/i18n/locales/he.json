@@ -56,6 +56,7 @@
     "label": "ערכת נושא: {{value}}"
   },
   "nav": {
+    "home": "בית",
     "dashboard": "דאשבורד",
     "sessions": "Sessions",
     "chats": "שיחות",
@@ -66,7 +67,9 @@
     "infrastructure": "תשתית",
     "plugins": "תוספים",
     "logs": "לוגים",
-    "sales": "Sales"
+    "sales": "Sales",
+    "campaigns": "קמפיינים",
+    "config": "Config"
   },
   "chats": {
     "subtitle": "שליחה ומענה להודעות WhatsApp בזמן אמת",
@@ -128,7 +131,8 @@
     "footer": "נבנה באהבה על ידי Yudhi Armyndharis וקהילת OpenWA",
     "version": "v{{version}} · {{date}}"
   },
-  "dashboard": {
+  "home": "בית",
+    "dashboard": {
     "title": "דאשבורד",
     "subtitle": "סקירה כללית של ה-Sessions והפעילות שלך ב-WhatsApp",
     "stats": {

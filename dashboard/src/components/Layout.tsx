@@ -3,17 +3,12 @@ import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { sessionApi } from '../services/api';
 import {
-  LayoutDashboard,
+  Home,
   Smartphone,
   MessageSquare,
-  Webhook,
-  Key,
-  FileText,
-  ClipboardList,
+  Rocket,
+  Settings2,
   LogOut,
-  Send,
-  Server,
-  Puzzle,
   Sun,
   Moon,
   Monitor,
@@ -22,7 +17,6 @@ import {
   ChevronLeft,
   ChevronRight,
   Languages,
-  TrendingUp,
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { type UserRole } from '../hooks/useRole';
@@ -35,18 +29,11 @@ interface LayoutProps {
 }
 
 const allNavItems = [
-  { to: '/', icon: LayoutDashboard, key: 'dashboard' as const, adminOnly: false },
-  { to: '/sessions', icon: Smartphone, key: 'sessions' as const, adminOnly: false },
-  { to: '/sales', icon: TrendingUp, key: 'sales' as const, adminOnly: false },
-  { to: '/chats', icon: MessageSquare, key: 'chats' as const, adminOnly: false },
-  { to: '/webhooks', icon: Webhook, key: 'webhooks' as const, adminOnly: false },
-  { to: '/templates', icon: ClipboardList, key: 'templates' as const, adminOnly: false },
-  { to: '/api-keys', icon: Key, key: 'apiKeys' as const, adminOnly: true },
-  { to: '/message-tester', icon: Send, key: 'messageTester' as const, adminOnly: false },
-  // Backend /infra/* is ADMIN-only; hide the nav item from non-admins (UX + defense-in-depth).
-  { to: '/infrastructure', icon: Server, key: 'infrastructure' as const, adminOnly: true },
-  { to: '/plugins', icon: Puzzle, key: 'plugins' as const, adminOnly: true },
-  { to: '/logs', icon: FileText, key: 'logs' as const, adminOnly: false },
+  { to: '/', icon: Home, key: 'home' as const, adminOnly: false },
+  { to: '/sessoes', icon: Smartphone, key: 'sessions' as const, adminOnly: false },
+  { to: '/conversas', icon: MessageSquare, key: 'chats' as const, adminOnly: false },
+  { to: '/campanhas', icon: Rocket, key: 'campaigns' as const, adminOnly: false },
+  { to: '/config', icon: Settings2, key: 'config' as const, adminOnly: false },
 ];
 
 const themeIcons = { light: Sun, dark: Moon, system: Monitor };

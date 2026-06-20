@@ -56,6 +56,7 @@
     "label": "المظهر: {{value}}"
   },
   "nav": {
+    "home": "الرئيسية",
     "dashboard": "لوحة التحكم",
     "sessions": "الجلسات",
     "chats": "المحادثات",
@@ -66,7 +67,9 @@
     "infrastructure": "البنية التحتية",
     "plugins": "الإضافات",
     "logs": "السجلات",
-    "sales": "Sales"
+    "sales": "Sales",
+    "campaigns": "حملات",
+    "config": "Config"
   },
   "chats": {
     "subtitle": "أرسل ورد على رسائل واتساب في الوقت الفعلي",
@@ -128,7 +131,8 @@
     "footer": "صُنع بـ ❤️ بواسطة Yudhi Armyndharis ومجتمع OpenWA",
     "version": "v{{version}} · {{date}}"
   },
-  "dashboard": {
+  "home": "الرئيسية",
+    "dashboard": {
     "title": "لوحة التحكم",
     "subtitle": "نظرة عامة على جلسات واتساب ونشاطك",
     "stats": {

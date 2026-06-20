@@ -56,6 +56,7 @@
     "label": "థీమ్: {{value}}"
   },
   "nav": {
+    "home": "హోమ్",
     "dashboard": "డ్యాష్‌బోర్డ్",
     "sessions": "సెషన్స్",
     "chats": "చాట్‌లు",
@@ -66,7 +67,9 @@
     "infrastructure": "ఇన్‌ఫ్రాస్ట్రక్చర్",
     "plugins": "ప్లగిన్స్",
     "logs": "లాగ్స్",
-    "sales": "Sales"
+    "sales": "Sales",
+    "campaigns": "ప్రచారాలు",
+    "config": "Config"
   },
   "chats": {
     "subtitle": "వాట్సాప్ సందేశాలను నిజ-సమయంలో పంపండి మరియు ప్రత్యుత్తరం ఇవ్వండి",
@@ -128,7 +131,8 @@
     "footer": "Yudhi Armyndharis మరియు OpenWA కమ్యూనిటీ ద్వారా ❤️ తో తయారు చేయబడింది",
     "version": "v{{version}} · {{date}}"
   },
-  "dashboard": {
+  "home": "హోమ్",
+    "dashboard": {
     "title": "డ్యాష్‌బోర్డ్",
     "subtitle": "మీ వాట్సాప్ సెషన్లు మరియు యాక్టివిటీ యొక్క అవలోకనం",
     "stats": {

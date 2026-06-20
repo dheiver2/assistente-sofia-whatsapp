@@ -13,14 +13,8 @@ const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login }
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Sessions = lazy(() => import('./pages/Sessions').then(m => ({ default: m.Sessions })));
 const Chats = lazy(() => import('./pages/Chats').then(m => ({ default: m.Chats })));
-const Webhooks = lazy(() => import('./pages/Webhooks').then(m => ({ default: m.Webhooks })));
-const Templates = lazy(() => import('./pages/Templates').then(m => ({ default: m.Templates })));
-const Logs = lazy(() => import('./pages/Logs').then(m => ({ default: m.Logs })));
-const ApiKeys = lazy(() => import('./pages/ApiKeys').then(m => ({ default: m.ApiKeys })));
-const MessageTester = lazy(() => import('./pages/MessageTester').then(m => ({ default: m.MessageTester })));
-const Infrastructure = lazy(() => import('./pages/Infrastructure').then(m => ({ default: m.Infrastructure })));
-const Plugins = lazy(() => import('./pages/Plugins'));
 const SalesEngine = lazy(() => import('./pages/SalesEngine').then(m => ({ default: m.SalesEngine })));
+const Config = lazy(() => import('./pages/Config').then(m => ({ default: m.Config })));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -104,16 +98,21 @@ function AppContent() {
         <Routes>
           <Route path="/" element={<Layout onLogout={handleLogout} userRole={role} />}>
             <Route index element={<Dashboard />} />
-            <Route path="sessions" element={<Sessions />} />
-            <Route path="sales" element={<SalesEngine />} />
-            <Route path="chats" element={<Chats />} />
-            <Route path="webhooks" element={<Webhooks />} />
-            <Route path="templates" element={<Templates />} />
-            {role === 'admin' && <Route path="api-keys" element={<ApiKeys />} />}
-            <Route path="logs" element={<Logs />} />
-            <Route path="message-tester" element={<MessageTester />} />
-            <Route path="infrastructure" element={<Infrastructure />} />
-            {role === 'admin' && <Route path="plugins" element={<Plugins />} />}
+            <Route path="sessoes" element={<Sessions />} />
+            <Route path="conversas" element={<Chats />} />
+            <Route path="campanhas" element={<SalesEngine />} />
+            <Route path="config" element={<Config />} />
+            {/* Legacy redirects — keep old URLs working */}
+            <Route path="sessions" element={<Navigate to="/sessoes" replace />} />
+            <Route path="chats" element={<Navigate to="/conversas" replace />} />
+            <Route path="sales" element={<Navigate to="/campanhas" replace />} />
+            <Route path="webhooks" element={<Navigate to="/config?tab=webhooks" replace />} />
+            <Route path="templates" element={<Navigate to="/config?tab=templates" replace />} />
+            <Route path="api-keys" element={<Navigate to="/config?tab=apikeys" replace />} />
+            <Route path="infrastructure" element={<Navigate to="/config?tab=infra" replace />} />
+            <Route path="plugins" element={<Navigate to="/config?tab=plugins" replace />} />
+            <Route path="logs" element={<Navigate to="/config?tab=logs" replace />} />
+            <Route path="message-tester" element={<Navigate to="/conversas" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
         </Routes>

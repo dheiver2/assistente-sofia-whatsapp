@@ -75,3 +75,6 @@ uploads/
 docs/plans/
 CLAUDE.md
 _docs/
+# Allow src/data (static config files inside source tree)
+!dashboard/src/data/
+!dashboard/src/data/**

@@ -1,0 +1,61 @@
+.config-page {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 100vh;
+}
+
+.config-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 16px 24px 0;
+  border-bottom: 2px solid var(--border, #e2e8f0);
+  background: var(--bg-white, #fff);
+  flex-wrap: wrap;
+}
+
+.config-tab {
+  padding: 10px 18px;
+  border: none;
+  background: none;
+  color: var(--text-muted, #64748b);
+  font-size: 0.88rem;
+  font-weight: 500;
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.config-tab:hover { color: var(--text-primary, #0f172a); }
+
+.config-tab.active {
+  color: var(--primary, #25d366);
+  border-bottom-color: var(--primary, #25d366);
+  font-weight: 600;
+}
+
+[data-theme='dark'] .config-tabs {
+  background: var(--bg-white, #1e293b);
+  border-color: var(--border, #334155);
+}
+
+[data-theme='dark'] .config-tab:hover { color: var(--text-primary, #f1f5f9); }
+
+.config-content {
+  flex: 1;
+  overflow: auto;
+}
+
+/* Remove top padding from embedded pages since Config provides its own chrome */
+.config-content .sales-page,
+.config-content > div > .page,
+.config-content .templates-page,
+.config-content .webhooks-page,
+.config-content .logs-page,
+.config-content .api-keys-page,
+.config-content .plugins-page,
+.config-content .infra-page {
+  padding-top: 12px;
+}

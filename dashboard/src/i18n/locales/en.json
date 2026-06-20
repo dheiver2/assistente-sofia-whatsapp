@@ -56,9 +56,12 @@
     "label": "Theme: {{value}}"
   },
   "nav": {
+    "home": "Home",
     "dashboard": "Dashboard",
     "sessions": "Sessions",
     "sales": "Sales",
+    "campaigns": "Campaigns",
+    "config": "Config",
     "chats": "Chats",
     "webhooks": "Webhooks",
     "templates": "Templates",
