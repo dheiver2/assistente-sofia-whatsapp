@@ -497,3 +497,74 @@
 
 /* ---- launching state ---- */
 .launching-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px; text-align: center; }
+
+/* ---- preset chips (modelos prontos) ---- */
+.preset-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-bottom: 10px;
+}
+
+.preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border, #e2e8f0);
+  background: var(--bg-light, #f8fafc);
+  color: var(--text-primary, #0f172a);
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+  white-space: nowrap;
+}
+
+.preset-chip:hover {
+  border-color: var(--primary, #25d366);
+  background: var(--bg-white, #fff);
+}
+
+.preset-chip.active {
+  border-color: var(--primary, #25d366);
+  background: var(--primary, #25d366);
+  color: #fff;
+}
+
+[data-theme='dark'] .preset-chip {
+  background: #1e293b;
+  border-color: var(--border, #334155);
+  color: var(--text-primary, #f1f5f9);
+}
+
+[data-theme='dark'] .preset-chip.active {
+  background: var(--primary, #25d366);
+  border-color: var(--primary, #25d366);
+  color: #fff;
+}
+
+/* ---- btn-secondary ---- */
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0.65rem 1.1rem;
+  background: transparent;
+  color: var(--text-primary, #0f172a);
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: var(--radius, 10px);
+  font-size: 0.88rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.btn-secondary:hover { background: var(--bg-light, #f8fafc); }
+
+[data-theme='dark'] .btn-secondary {
+  color: var(--text-primary, #f1f5f9);
+  border-color: var(--border, #334155);
+}
+
+[data-theme='dark'] .btn-secondary:hover { background: #1e293b; }

@@ -61,6 +61,59 @@ export class SalesEngineService {
     return p;
   }
 
+  /** Gera uma resposta de follow-up para continuar a conversa com um lead que respondeu. */
+  async generateFollowUp(params: {
+    sessionId: string;
+    offerHint?: string | null;
+    need?: string;
+    history: { role: 'user' | 'assistant'; content: string }[];
+    lastMessage: string;
+  }): Promise<string> {
+    const session = await this.sessionRepo.findOne({ where: { id: params.sessionId }, select: ['id', 'config'] });
+    const ai = ((session?.config as Record<string, unknown> | undefined)?.ai as SessionAi | undefined) ?? {};
+    const model = ai.model?.trim() || this.defaultModel;
+
+    const persona = ai.persona?.trim() || 'Você é um(a) consultor(a) de vendas simpático(a) e consultivo(a).';
+    let systemPrompt = `${persona}\n\nVocê está em uma conversa de vendas pelo WhatsApp. Seu objetivo é engajar o lead e guiá-lo até a conversão.`;
+
+    if (ai.knowledge?.trim()) {
+      systemPrompt += `\n\nConhecimento da empresa (use como base, nunca invente o que não estiver aqui):\n${ai.knowledge.trim()}`;
+    }
+    if (params.offerHint?.trim()) {
+      systemPrompt += `\n\nObjetivo desta campanha: ${params.offerHint.trim()}`;
+    }
+    if (params.need?.trim()) {
+      systemPrompt += `\n\nNecessidade identificada deste lead: ${params.need.trim()}`;
+    }
+    systemPrompt +=
+      '\n\nRegras: resposta curta (2 a 3 frases), natural para WhatsApp, em português brasileiro; avance para o fechamento se o lead demonstrar interesse; se pedir preço ou condições, forneça se disponível na base de conhecimento; faça uma pergunta de fechamento quando oportuno; sem markdown.';
+
+    const messages = [
+      { role: 'system', content: systemPrompt },
+      ...params.history.map(h => ({ role: h.role as string, content: h.content })),
+      { role: 'user', content: params.lastMessage },
+    ];
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
+    try {
+      const res = await fetch(`${this.ollamaUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ model, stream: false, messages, options: { temperature: 0.7, num_predict: 250 } }),
+        signal: controller.signal,
+      });
+      if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
+      const data = (await res.json()) as { message?: { content?: string } };
+      return data.message?.content?.trim() ?? '';
+    } catch (err) {
+      this.logger.warn('Falha no follow-up de conversa', { error: String(err) });
+      return '';
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
   private async forLead(lead: LeadDto, ai: SessionAi, model: string, offerHint?: string): Promise<OutreachResultDto> {
     const userContent = `Dados do cliente:\nNome: ${lead.name ?? '(desconhecido)'}\nAtributos: ${JSON.stringify(
       lead.attributes,

@@ -8,6 +8,7 @@ import { createLogger } from '../../common/services/logger.service';
 import { Campaign, LeadSource, Outreach, OptOut, OutreachStage } from './entities/sales.entities';
 import { ConnectorLead, DataConnectorService } from './data-connector.service';
 import { SalesEngineService } from './sales-engine.service';
+import { MessageService } from '../message/message.service';
 
 /** Normaliza um telefone para somente dígitos (chave de opt-out e JID). */
 export function normalizePhone(phone?: string | null): string {
@@ -19,6 +20,9 @@ const OPT_OUT_RE = /\b(sair|parar|cancelar|descadastrar|remover|stop|n[ãa]o que
 @Injectable()
 export class CampaignService implements OnModuleInit {
   private readonly logger = createLogger('CampaignService');
+  // Histórico de conversa em memória por lead: chave = "sessionId:phone", máx 10 turnos por lado
+  private readonly convHistory = new Map<string, { role: 'user' | 'assistant'; content: string }[]>();
+  private readonly MAX_HISTORY_TURNS = 10;
 
   constructor(
     @InjectRepository(LeadSource, 'data') private readonly sources: Repository<LeadSource>,
@@ -27,10 +31,11 @@ export class CampaignService implements OnModuleInit {
     @InjectRepository(OptOut, 'data') private readonly optOuts: Repository<OptOut>,
     private readonly connector: DataConnectorService,
     private readonly salesEngine: SalesEngineService,
+    private readonly messages: MessageService,
     private readonly hooks: HookManager,
   ) {}
 
-  // Item 4 — rastreia o funil: marca 'replied' e detecta opt-out quando o cliente responde.
+  // Rastreia o funil, detecta opt-out e continua a conversa com IA de conversão.
   onModuleInit(): void {
     this.hooks.register('sales-engine', 'message:received', async ctx => {
       const c = ctx as HookContext<IncomingMessage>;
@@ -41,22 +46,79 @@ export class CampaignService implements OnModuleInit {
       const phone = normalizePhone(msg.chatId?.split('@')[0]);
       if (!phone) return { continue: true };
 
+      // Opt-out: cancela qualquer disparo ativo para este lead
       if (OPT_OUT_RE.test(msg.body ?? '')) {
         await this.addOptOut(c.sessionId, phone);
         await this.outreach.update(
-          { sessionId: c.sessionId, phone, stage: 'sent' as OutreachStage },
+          { sessionId: c.sessionId, phone },
           { stage: 'opted_out' },
         );
-        return { continue: true };
+        this.convHistory.delete(`${c.sessionId}:${phone}`);
+        return { continue: false }; // bloqueia auto-reply genérico também
       }
-      // Marca como respondida a abordagem enviada para este contato.
-      await this.outreach.update(
-        { sessionId: c.sessionId, phone, stage: 'sent' as OutreachStage },
-        { stage: 'replied' },
-      );
-      return { continue: true };
+
+      // Busca abordagem ativa deste lead (sent ou replied)
+      const activeOutreach = await this.outreach
+        .createQueryBuilder('o')
+        .where('o.sessionId = :sid AND o.phone = :phone AND o.stage IN (:...stages)', {
+          sid: c.sessionId,
+          phone,
+          stages: ['sent', 'replied'],
+        })
+        .orderBy('o.updatedAt', 'DESC')
+        .getOne();
+
+      if (!activeOutreach) {
+        return { continue: true }; // lead sem campanha ativa → auto-reply normal
+      }
+
+      // Marca como respondida
+      if (activeOutreach.stage === 'sent') {
+        await this.outreach.update(activeOutreach.id, { stage: 'replied' });
+      }
+
+      // Carrega campanha para contexto
+      const campaign = await this.campaigns.findOne({ where: { id: activeOutreach.campaignId } });
+
+      // Histórico de conversa deste lead
+      const histKey = `${c.sessionId}:${phone}`;
+      const history = this.convHistory.get(histKey) ?? [];
+
+      // Insere a mensagem de abordagem original como primeira entrada do assistente se histórico vazio
+      if (history.length === 0 && activeOutreach.message) {
+        history.push({ role: 'assistant', content: activeOutreach.message });
+      }
+
+      const incomingText = (msg.body ?? '').trim();
+      if (!incomingText) return { continue: false };
+
+      // Gera follow-up via IA com contexto da campanha
+      const reply = await this.salesEngine.generateFollowUp({
+        sessionId: c.sessionId,
+        offerHint: campaign?.offerHint,
+        need: activeOutreach.need,
+        history,
+        lastMessage: incomingText,
+      });
+
+      if (reply) {
+        // Atualiza histórico
+        history.push({ role: 'user', content: incomingText });
+        history.push({ role: 'assistant', content: reply });
+        if (history.length > this.MAX_HISTORY_TURNS * 2) history.splice(0, 2);
+        this.convHistory.set(histKey, history);
+
+        // Envia a resposta
+        try {
+          await this.messages.sendText(c.sessionId, { chatId: msg.chatId ?? `${phone}@c.us`, text: reply });
+        } catch (err) {
+          this.logger.warn('Falha ao enviar follow-up de campanha', { error: String(err) });
+        }
+      }
+
+      return { continue: false }; // bloqueia o auto-reply genérico para este lead
     });
-    this.logger.log('Funnel tracking hook registrado (message:received)');
+    this.logger.log('Hook de follow-up de campanha registrado (message:received)');
   }
 
   // ---- Fontes de leads (Item 1) ----

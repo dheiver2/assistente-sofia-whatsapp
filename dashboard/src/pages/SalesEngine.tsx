@@ -31,6 +31,15 @@ import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
 import './SalesEngine.css';
 
+const CAMPAIGN_PRESETS = [
+  { icon: '🔄', label: 'Reativação', hint: 'Reativar clientes inativos há mais de 30 dias com oferta especial de retorno' },
+  { icon: '🎁', label: 'Promoção', hint: 'Divulgar promoção relâmpago com desconto exclusivo para clientes da base' },
+  { icon: '📦', label: 'Produto novo', hint: 'Apresentar novo produto ou serviço para clientes que já compraram antes' },
+  { icon: '🤝', label: 'Pós-venda', hint: 'Follow-up pós-compra, verificar satisfação e oferecer upsell ou complemento' },
+  { icon: '💳', label: 'Renovação', hint: 'Lembrar clientes com contrato ou plano próximo do vencimento para renovar com condição especial' },
+  { icon: '🎯', label: 'Recuperação', hint: 'Recuperar leads que demonstraram interesse mas não fecharam, com nova abordagem personalizada' },
+];
+
 const STAGE_LABEL: Record<string, string> = {
   pending: 'Pendente',
   approved: 'Aprovada',
@@ -600,7 +609,19 @@ export function SalesEngine() {
               />
             </div>
             <div className="form-group">
-              <label>Objetivo / oferta (a IA usa isso para personalizar cada mensagem)</label>
+              <label>Objetivo / oferta (a IA usa isso para personalizar cada mensagem e continuar a conversa)</label>
+              <div className="preset-chips">
+                {CAMPAIGN_PRESETS.map(p => (
+                  <button
+                    key={p.label}
+                    type="button"
+                    className={`preset-chip ${cOffer === p.hint ? 'active' : ''}`}
+                    onClick={() => setCOffer(p.hint)}
+                  >
+                    {p.icon} {p.label}
+                  </button>
+                ))}
+              </div>
               <textarea
                 rows={2}
                 value={cOffer}
