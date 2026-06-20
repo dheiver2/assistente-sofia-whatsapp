@@ -172,4 +172,12 @@ export class CampaignService implements OnModuleInit {
     const exists = await this.optOuts.findOne({ where: { sessionId, phone: p } });
     if (!exists) await this.optOuts.save(this.optOuts.create({ sessionId, phone: p }));
   }
+
+  async listOptOuts(sessionId: string): Promise<OptOut[]> {
+    return this.optOuts.find({ where: { sessionId }, order: { createdAt: 'DESC' } });
+  }
+
+  async removeOptOut(id: string): Promise<void> {
+    await this.optOuts.delete(id);
+  }
 }

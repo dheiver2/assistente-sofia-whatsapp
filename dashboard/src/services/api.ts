@@ -385,6 +385,13 @@ export interface Outreach {
   error: string | null;
 }
 
+export interface OptOut {
+  id: string;
+  sessionId: string;
+  phone: string;
+  createdAt: string;
+}
+
 export const salesApi = {
   listSources: (sessionId: string) => request<LeadSource[]>(`/sales/sources?sessionId=${sessionId}`),
   createSource: (body: Partial<LeadSource>) =>
@@ -403,6 +410,9 @@ export const salesApi = {
     request<Outreach>(`/sales/outreach/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
   send: (id: string) => request<{ approved: number }>(`/sales/campaigns/${id}/send`, { method: 'POST' }),
   metrics: (id: string) => request<Record<string, number>>(`/sales/campaigns/${id}/metrics`),
+
+  listOptOuts: (sessionId: string) => request<OptOut[]>(`/sales/opt-out?sessionId=${sessionId}`),
+  removeOptOut: (id: string) => request<{ ok: boolean }>(`/sales/opt-out/${id}`, { method: 'DELETE' }),
 };
 
 // =============================================================================

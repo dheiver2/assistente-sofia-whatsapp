@@ -111,4 +111,18 @@ export class SalesEngineController {
     await this.campaignService.addOptOut(dto.sessionId, dto.phone);
     return { ok: true };
   }
+
+  @Get('opt-out')
+  @ApiOperation({ summary: 'Lista os contatos em opt-out de uma sessão/empresa' })
+  listOptOuts(@Query('sessionId') sessionId: string) {
+    return this.campaignService.listOptOuts(sessionId);
+  }
+
+  @Delete('opt-out/:id')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @ApiOperation({ summary: 'Remove um contato da lista de opt-out' })
+  async removeOptOut(@Param('id') id: string): Promise<{ ok: boolean }> {
+    await this.campaignService.removeOptOut(id);
+    return { ok: true };
+  }
 }

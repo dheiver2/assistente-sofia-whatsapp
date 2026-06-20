@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Loader2, Plus, Send, Sparkles, Trash2, Database, RefreshCw } from 'lucide-react';
-import { sessionApi, salesApi, type Session, type Campaign, type Outreach, type LeadSource, type SalesLead } from '../services/api';
+import { sessionApi, salesApi, type Session, type Campaign, type Outreach, type LeadSource, type SalesLead, type OptOut } from '../services/api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useToast } from '../components/Toast';
 import { PageHeader } from '../components/PageHeader';
@@ -32,8 +32,22 @@ export function SalesEngine() {
   const [outreach, setOutreach] = useState<Outreach[]>([]);
   const [metrics, setMetrics] = useState<Record<string, number>>({});
   const [busy, setBusy] = useState(false);
+  const [optOuts, setOptOuts] = useState<OptOut[]>([]);
 
-  // formulários
+  // formulários — fonte Postgres
+  const [pgName, setPgName] = useState('');
+  const [pgHost, setPgHost] = useState('');
+  const [pgPort, setPgPort] = useState('5432');
+  const [pgDb, setPgDb] = useState('');
+  const [pgUser, setPgUser] = useState('');
+  const [pgPass, setPgPass] = useState('');
+  const [pgQuery, setPgQuery] = useState('SELECT * FROM clientes LIMIT 100');
+  const [pgNameCol, setPgNameCol] = useState('nome');
+  const [pgPhoneCol, setPgPhoneCol] = useState('telefone');
+  const [pgBusy, setPgBusy] = useState(false);
+  const [showPgForm, setShowPgForm] = useState(false);
+
+  // formulários — campanha
   const [cName, setCName] = useState('');
   const [cOffer, setCOffer] = useState('');
   const [cRate, setCRate] = useState(6);
@@ -52,9 +66,14 @@ export function SalesEngine() {
 
   const refresh = useCallback(async () => {
     if (!sessionId) return;
-    const [src, camp] = await Promise.all([salesApi.listSources(sessionId), salesApi.listCampaigns(sessionId)]);
+    const [src, camp, outs] = await Promise.all([
+      salesApi.listSources(sessionId),
+      salesApi.listCampaigns(sessionId),
+      salesApi.listOptOuts(sessionId),
+    ]);
     setSources(src);
     setCampaigns(camp);
+    setOptOuts(outs);
   }, [sessionId]);
 
   useEffect(() => {
@@ -117,6 +136,41 @@ export function SalesEngine() {
   const saveMessage = async (o: Outreach, message: string) => {
     await salesApi.updateOutreach(o.id, { message });
     setOutreach(prev => prev.map(x => (x.id === o.id ? { ...x, message } : x)));
+  };
+
+  const createPgSource = async () => {
+    if (!pgName.trim() || !pgHost.trim()) return;
+    setPgBusy(true);
+    try {
+      const src = await salesApi.createSource({
+        sessionId,
+        name: pgName,
+        type: 'postgres',
+        config: {
+          host: pgHost, port: Number(pgPort), database: pgDb, user: pgUser, password: pgPass,
+          query: pgQuery, nameColumn: pgNameCol, phoneColumn: pgPhoneCol,
+        },
+      } as Partial<LeadSource>);
+      toast.success('Fonte criada', src.name);
+      setPgName(''); setPgHost(''); setPgDb(''); setPgUser(''); setPgPass('');
+      setShowPgForm(false);
+      await refresh();
+    } catch (e) {
+      toast.error('Erro', e instanceof Error ? e.message : 'Falha ao criar fonte');
+    } finally {
+      setPgBusy(false);
+    }
+  };
+
+  const testSource = async (id: string) => {
+    const r = await salesApi.testSource(id);
+    if (r.ok) toast.success('Conexão OK', r.message);
+    else toast.error('Falha', r.message);
+  };
+
+  const removeOptOut = async (id: string) => {
+    await salesApi.removeOptOut(id);
+    setOptOuts(prev => prev.filter(o => o.id !== id));
   };
 
   const send = async (c: Campaign) => {
@@ -182,7 +236,6 @@ export function SalesEngine() {
             <div className="form-group">
               <label><Database size={13} /> Leads inline (JSON)</label>
               <textarea rows={6} value={leadsJson} onChange={e => setLeadsJson(e.target.value)} />
-              <small>Use uma fonte Postgres (read-only) via API <code>/api/sales/sources</code> para puxar da base real.</small>
             </div>
           )}
           <button className="btn-primary" onClick={() => void createCampaign()} disabled={busy || !sessionId}>
@@ -214,6 +267,72 @@ export function SalesEngine() {
             </div>
           ))}
         </div>
+      </div>
+
+      {/* Fontes Postgres */}
+      <div className="sales-card wide">
+        <h3>
+          <Database size={16} /> Fontes de leads (Postgres)
+          <button className="btn-sm" style={{ marginLeft: 8 }} onClick={() => setShowPgForm(v => !v)}>
+            {showPgForm ? 'Cancelar' : '+ Adicionar fonte'}
+          </button>
+        </h3>
+        {showPgForm && (
+          <div className="pg-form">
+            <div className="sales-row">
+              <div className="form-group"><label>Nome</label><input value={pgName} onChange={e => setPgName(e.target.value)} placeholder="Base de clientes" /></div>
+              <div className="form-group"><label>Host</label><input value={pgHost} onChange={e => setPgHost(e.target.value)} placeholder="db.empresa.com" /></div>
+              <div className="form-group"><label>Porta</label><input value={pgPort} onChange={e => setPgPort(e.target.value)} /></div>
+            </div>
+            <div className="sales-row">
+              <div className="form-group"><label>Banco</label><input value={pgDb} onChange={e => setPgDb(e.target.value)} placeholder="producao" /></div>
+              <div className="form-group"><label>Usuário</label><input value={pgUser} onChange={e => setPgUser(e.target.value)} /></div>
+              <div className="form-group"><label>Senha</label><input type="password" value={pgPass} onChange={e => setPgPass(e.target.value)} /></div>
+            </div>
+            <div className="form-group"><label>Query (somente leitura)</label><textarea rows={3} value={pgQuery} onChange={e => setPgQuery(e.target.value)} /></div>
+            <div className="sales-row">
+              <div className="form-group"><label>Coluna nome</label><input value={pgNameCol} onChange={e => setPgNameCol(e.target.value)} /></div>
+              <div className="form-group"><label>Coluna telefone</label><input value={pgPhoneCol} onChange={e => setPgPhoneCol(e.target.value)} /></div>
+            </div>
+            <button className="btn-primary" onClick={() => void createPgSource()} disabled={pgBusy || !sessionId}>
+              {pgBusy ? <Loader2 size={14} className="spin" /> : <Plus size={14} />} Salvar fonte
+            </button>
+          </div>
+        )}
+        {sources.filter(s => s.type === 'postgres').length === 0 && !showPgForm && (
+          <p className="muted">Nenhuma fonte Postgres configurada.</p>
+        )}
+        {sources.filter(s => s.type === 'postgres').map(s => (
+          <div key={s.id} className="camp-item">
+            <div className="camp-info"><strong>{s.name}</strong><span className="muted">postgres</span></div>
+            <div className="camp-actions">
+              <button className="btn-sm" onClick={() => void testSource(s.id)}>Testar</button>
+              <button className="btn-icon-sm danger" onClick={() => void salesApi.deleteSource(s.id).then(refresh)}><Trash2 size={14} /></button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Opt-out */}
+      <div className="sales-card wide">
+        <h3>Descadastros (opt-out) <span className="muted" style={{ fontSize: 13, fontWeight: 400 }}>— {optOuts.length} contato(s)</span></h3>
+        {optOuts.length === 0 && <p className="muted">Nenhum contato descadastrado.</p>}
+        {optOuts.length > 0 && (
+          <table className="sales-table">
+            <thead><tr><th>Telefone</th><th>Data</th><th></th></tr></thead>
+            <tbody>
+              {optOuts.map(o => (
+                <tr key={o.id}>
+                  <td>{o.phone}</td>
+                  <td className="muted">{new Date(o.createdAt).toLocaleDateString('pt-BR')}</td>
+                  <td>
+                    <button className="btn-icon-sm danger" onClick={() => void removeOptOut(o.id)} title="Remover opt-out"><Trash2 size={13} /></button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Funil + revisão */}
