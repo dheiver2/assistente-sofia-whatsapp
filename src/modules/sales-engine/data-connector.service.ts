@@ -9,10 +9,12 @@ export interface ConnectorLead {
   attributes: Record<string, unknown>;
 }
 
-/** Tipo mínimo do pool do `pg` (driver sem @types). */
-interface PgPool {
-  query: (sql: string) => Promise<{ rows: Record<string, unknown>[] }>;
-  end: () => Promise<void>;
+/** Converte um valor de coluna (desconhecido) em string com segurança, sem cair em "[object Object]". */
+function coerce(value: unknown): string {
+  if (value == null) return '';
+  if (typeof value === 'string') return value;
+  if (typeof value === 'number' || typeof value === 'boolean' || typeof value === 'bigint') return String(value);
+  return JSON.stringify(value);
 }
 
 interface PgConfig {
@@ -46,7 +48,7 @@ export class DataConnectorService {
     }
   }
 
-  private async withPool<T>(cfg: PgConfig, fn: (pool: PgPool) => Promise<T>): Promise<T> {
+  private async withPool<T>(cfg: PgConfig, fn: (pool: Pool) => Promise<T>): Promise<T> {
     const pool = new Pool({
       host: cfg.host,
       port: cfg.port ?? 5432,
@@ -56,7 +58,7 @@ export class DataConnectorService {
       max: 2,
       connectionTimeoutMillis: 8000,
       ssl: cfg.ssl ? { rejectUnauthorized: false } : undefined,
-    }) as PgPool;
+    });
     try {
       return await fn(pool);
     } finally {
@@ -97,8 +99,8 @@ export class DataConnectorService {
       const result = await pool.query(sql);
       return result.rows.map((row: Record<string, unknown>) => {
         const attributes = { ...row };
-        const name = nameCol ? String(row[nameCol] ?? '') : undefined;
-        const phone = phoneCol ? String(row[phoneCol] ?? '') : undefined;
+        const name = nameCol ? coerce(row[nameCol]) : undefined;
+        const phone = phoneCol ? coerce(row[phoneCol]) : undefined;
         return { name: name || undefined, phone: phone || undefined, attributes };
       });
     });

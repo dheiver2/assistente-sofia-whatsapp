@@ -36,7 +36,7 @@ export class ExtensionsRegistrar implements OnModuleInit {
     // Resolver de UUID -> { nome, config de IA } da sessão, para o auto-reply montar a IA por empresa.
     const resolveSession = async (sessionId: string): Promise<{ name: string | null; ai: SessionAi | null }> => {
       const row = await this.sessionRepo.findOne({ where: { id: sessionId }, select: ['name', 'config'] });
-      const ai = (row?.config as Record<string, unknown> | undefined)?.ai as SessionAi | undefined;
+      const ai = row?.config?.ai as SessionAi | undefined;
       return { name: row?.name ?? null, ai: ai ?? null };
     };
     this.pluginLoader.registerBuiltInPlugin(autoReplyManifest, new AutoReplyPlugin(resolveSession));

@@ -61,12 +61,7 @@ export class SalesEngineService {
     return p;
   }
 
-  private async forLead(
-    lead: LeadDto,
-    ai: SessionAi,
-    model: string,
-    offerHint?: string,
-  ): Promise<OutreachResultDto> {
+  private async forLead(lead: LeadDto, ai: SessionAi, model: string, offerHint?: string): Promise<OutreachResultDto> {
     const userContent = `Dados do cliente:\nNome: ${lead.name ?? '(desconhecido)'}\nAtributos: ${JSON.stringify(
       lead.attributes,
       null,

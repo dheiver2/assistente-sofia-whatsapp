@@ -65,7 +65,8 @@
     "messageTester": "消息测试器",
     "infrastructure": "基础设施",
     "plugins": "插件",
-    "logs": "日志"
+    "logs": "日志",
+    "sales": "Sales"
   },
   "chats": {
     "subtitle": "实时发送和回复 WhatsApp 消息",
@@ -252,6 +253,29 @@
       "success": "Session has been force-killed. You can restart it now.",
       "failedTitle": "Force-Kill Failed",
       "failed": "Failed to force-kill the session."
+    },
+    "ai": {
+      "button": "AI",
+      "configureTitle": "Configure the attendant AI",
+      "modalTitle": "Attendant AI — {{name}}",
+      "loading": "Loading…",
+      "enabled": "AI enabled for this company",
+      "personaLabel": "Personality / instructions",
+      "personaPlaceholder": "E.g.: You are Bia, attendant for Company X. Warm and professional tone. Introduce yourself only on first contact…",
+      "personaHint": "Who the AI is, tone of voice and rules. Empty = use the global default persona.",
+      "knowledgeLabel": "Company knowledge",
+      "knowledgePlaceholder": "Services, products, hours, differentials, FAQ… the AI uses this to answer with real information.",
+      "knowledgeHint": "Injected into the AI context. It is instructed not to make up anything not stated here.",
+      "greetingLabel": "Fixed initial greeting (optional)",
+      "greetingPlaceholder": "E.g.: Hello! You're chatting with Company X support 👋",
+      "greetingHint": "Sent once, on first contact, before the AI reply.",
+      "modelLabel": "AI model (optional)",
+      "modelHint": "An Ollama model tag. Empty = use the system default model.",
+      "save": "Save AI",
+      "savedTitle": "AI saved",
+      "savedDesc": "Attendant AI for \"{{name}}\" updated.",
+      "errorTitle": "Save failed",
+      "errorDesc": "Please try again."
     }
   },
   "webhooks": {

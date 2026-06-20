@@ -88,7 +88,10 @@ export class CampaignService implements OnModuleInit {
   }
 
   /** Gera as abordagens da campanha: busca leads na fonte + roda a IA por lead. */
-  async generate(campaignId: string, inlineLeads?: { name?: string; phone?: string; attributes: Record<string, unknown> }[]): Promise<Outreach[]> {
+  async generate(
+    campaignId: string,
+    inlineLeads?: { name?: string; phone?: string; attributes: Record<string, unknown> }[],
+  ): Promise<Outreach[]> {
     const campaign = await this.campaigns.findOne({ where: { id: campaignId } });
     if (!campaign) throw new NotFoundException('Campanha não encontrada');
 

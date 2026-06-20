@@ -304,7 +304,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit, OnApplicat
   /** Configuração da IA de atendimento desta sessão (Session.config.ai). */
   async getAiConfig(id: string): Promise<AiConfig> {
     const session = await this.findOne(id);
-    const cfg = (session.config ?? {}) as Record<string, unknown>;
+    const cfg = session.config ?? {};
     return (cfg.ai as AiConfig | undefined) ?? {};
   }
 

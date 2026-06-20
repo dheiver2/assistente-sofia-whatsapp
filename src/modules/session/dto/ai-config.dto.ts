@@ -24,7 +24,9 @@ export class AiConfigDto {
   @MaxLength(8000)
   knowledge?: string;
 
-  @ApiPropertyOptional({ description: 'Modelo Ollama a usar nesta sessão (ex.: qwen2.5:7b-instruct). Vazio = padrão global.' })
+  @ApiPropertyOptional({
+    description: 'Modelo Ollama a usar nesta sessão (ex.: qwen2.5:7b-instruct). Vazio = padrão global.',
+  })
   @IsOptional()
   @IsString()
   @MaxLength(100)
