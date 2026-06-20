@@ -81,6 +81,33 @@ services:
   # The dashboard SPA is bundled into the image and served by NestJS on the same port:
   # open http://localhost:2785 — there is no separate dashboard container.
 
+  # ── Base de leads demo ──────────────────────────────────────────────────────
+  # 100 contatos brasileiros pré-populados para campanhas de teste.
+  # Conecte na aba "Fontes de Leads" com:
+  #   host: host.docker.internal  porta: 5433  banco: leads_demo
+  #   usuário: leads  senha: leads123  query: SELECT * FROM clientes LIMIT 100
+  leads-db:
+    image: postgres:16-alpine
+    container_name: openwa-leads-db
+    restart: unless-stopped
+    ports:
+      - '127.0.0.1:5433:5432'
+    environment:
+      POSTGRES_DB: leads_demo
+      POSTGRES_USER: leads
+      POSTGRES_PASSWORD: leads123
+    volumes:
+      - leads-db-data:/var/lib/postgresql/data
+      - ./data/leads-db:/docker-entrypoint-initdb.d:ro
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U leads -d leads_demo']
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  leads-db-data:
+
 networks:
   default:
     name: openwa-network
