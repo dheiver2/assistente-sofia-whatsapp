@@ -60,6 +60,9 @@ services:
       - WEBHOOK_TIMEOUT=10000
       - WEBHOOK_MAX_RETRIES=3
       - QUEUE_ENABLED=false
+      # Escape-hatch da proteção SSRF de webhooks: hosts liberados (vazio = proteção total).
+      # Só para receptores locais/sidecar de confiança (ex.: host.docker.internal em teste).
+      - SSRF_ALLOWED_HOSTS=${SSRF_ALLOWED_HOSTS:-}
       # AI auto-reply (Ollama, local open-source model). host.docker.internal = the host running Ollama.
       - OLLAMA_URL=${OLLAMA_URL:-http://host.docker.internal:11434}
       - OLLAMA_MODEL=${OLLAMA_MODEL:-qwen2.5:7b-instruct}
