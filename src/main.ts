@@ -239,7 +239,7 @@ async function bootstrap() {
   const port = process.env.PORT || 2785;
   await app.listen(port);
 
-  console.log(`🚀 OpenWA is running on: http://localhost:${port}`);
+  console.log(`🚀 Mangaba AI is running on: http://localhost:${port}`);
   console.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
 
   // Make the dashboard-serving outcome explicit so a missing build (no UI on `/`)

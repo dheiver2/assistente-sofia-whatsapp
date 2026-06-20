@@ -1,6 +1,6 @@
 {
   "common": {
-    "appName": "OpenWA",
+    "appName": "Mangaba AI",
     "appSubtitle": "WhatsApp API",
     "loading": "Carregando...",
     "save": "Salvar",
@@ -124,7 +124,7 @@
     "connectionError": "Não foi possível conectar ao servidor. Tente novamente.",
     "help": "Precisa de ajuda?",
     "viewDocs": "Ver Documentação",
-    "footer": "Feito com ❤️ por Yudhi Armyndharis e a Comunidade OpenWA",
+    "footer": "Feito com ❤️ por Yudhi Armyndharis e a Comunidade Mangaba AI",
     "version": "v{{version}} · {{date}}"
   },
   "dashboard": {
@@ -525,7 +525,7 @@
       "postgres": "PostgreSQL",
       "postgresDesc": "Banco de dados pronto para produção",
       "useBuiltIn": "Usar Container PostgreSQL Integrado",
-      "builtInDesc": "O OpenWA gerenciará um container PostgreSQL para você",
+      "builtInDesc": "O Mangaba AI gerenciará um container PostgreSQL para você",
       "dbName": "Nome do Banco de Dados",
       "poolSize": "Tamanho do Pool",
       "ssl": "Conexão SSL",
@@ -541,7 +541,7 @@
       "enable": "Habilitar Redis",
       "enableDesc": "Necessário para cache, armazenamento de sessões e filas BullMQ",
       "useBuiltIn": "Usar Container Redis Integrado",
-      "builtInDesc": "O OpenWA gerenciará um container Redis para você",
+      "builtInDesc": "O Mangaba AI gerenciará um container Redis para você",
       "queueTitle": "Habilitar Sistema de Filas BullMQ",
       "queueDesc": "Use filas de mensagens para entrega confiável de mensagens e webhooks",
       "statsTitle": "Estatísticas das Filas",
@@ -563,7 +563,7 @@
       "s3": "Amazon S3",
       "s3Desc": "Armazenamento na nuvem (compatível com S3)",
       "useBuiltIn": "Usar Container MinIO Integrado",
-      "builtInDesc": "O OpenWA gerenciará um container MinIO (compatível com S3) para você",
+      "builtInDesc": "O Mangaba AI gerenciará um container MinIO (compatível com S3) para você",
       "storagePath": "Caminho de Armazenamento",
       "bucket": "Nome do Bucket",
       "region": "Região",
@@ -615,7 +615,7 @@
     "configure": "Configurar",
     "empty": {
       "title": "Nenhum Plugin Encontrado",
-      "description": "Instale plugins para estender as funcionalidades do OpenWA"
+      "description": "Instale plugins para estender as funcionalidades do Mangaba AI"
     },
     "config": {
       "title": "Configurar {{name}}",

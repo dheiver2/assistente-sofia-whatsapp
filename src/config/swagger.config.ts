@@ -12,7 +12,7 @@ export const API_KEY_SECURITY_SCHEME = 'X-API-Key';
 export function createSwaggerConfig(): Omit<OpenAPIObject, 'paths'> {
   return (
     new DocumentBuilder()
-      .setTitle('OpenWA API')
+      .setTitle('Mangaba AI API')
       .setDescription('Open Source WhatsApp API Gateway - Free, Self-Hosted HTTP API')
       .setVersion('0.4.5')
       .addApiKey({ type: 'apiKey', name: 'X-API-Key', in: 'header' }, API_KEY_SECURITY_SCHEME)
