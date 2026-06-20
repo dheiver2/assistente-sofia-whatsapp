@@ -12,6 +12,7 @@ Construído sobre o [OpenWA](https://github.com/rmyndharis/OpenWA) (gateway de A
 - Responde **automaticamente** mensagens diretas (1:1) com respostas geradas por um **LLM local**.
 - Personalidade **configurável por variável de ambiente** — sem mexer no código.
 - Persona padrão **Sofia**: acolhe o contato, entende a necessidade, apresenta as soluções da DS Consultoria (machine learning, automação, chatbots, visão computacional, NLP, análise de dados, mentorias, treinamentos) e conduz para o próximo passo, sem inventar preços ou prazos.
+- **Memória de conversa**: mantém o histórico de cada contato (persistido em disco), então acompanha o contexto, lembra do que foi dito antes — inclusive após reiniciar — e só se apresenta uma vez, sem ficar repetitiva.
 
 ## 🏗️ Como funciona
 
@@ -56,7 +57,10 @@ Variáveis no [`docker-compose.dev.yml`](docker-compose.dev.yml) (serviço `open
 | `OLLAMA_URL` | `http://host.docker.internal:11434` | URL do servidor Ollama (host). |
 | `OLLAMA_MODEL` | `qwen2.5:7b-instruct` | Modelo usado (ótimo português). Para menos RAM, use um menor como `qwen2.5:3b-instruct` (qualidade de texto cai um pouco). |
 | `OLLAMA_TIMEOUT_MS` | `30000` | Timeout por requisição ao modelo. |
+| `AI_HISTORY_TURNS` | `8` | Quantos turnos (pergunta+resposta) de memória manter por conversa. |
 | `AI_SYSTEM_PROMPT` | *(persona Sofia)* | A personalidade/instruções da IA. |
+
+O histórico de cada conversa fica em `data/plugins/auto-reply/hist-<chatId>.json` (fora do Git) e sobrevive a reinícios.
 
 ### Personalizar a persona
 
