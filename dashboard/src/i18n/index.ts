@@ -1,6 +1,7 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 import LanguageDetector from 'i18next-browser-languagedetector';
+import ptBR from './locales/pt-BR.json';
 import en from './locales/en.json';
 import es from './locales/es.json';
 import he from './locales/he.json';
@@ -11,12 +12,13 @@ import te from './locales/te.json';
 import fr from './locales/fr.json';
 import it from './locales/it.json';
 
-export const supportedLanguages = ['en', 'es', 'he', 'zh-CN', 'zh-HK', 'ar', 'te', 'fr', 'it'] as const;
+export const supportedLanguages = ['pt-BR', 'en', 'es', 'he', 'zh-CN', 'zh-HK', 'ar', 'te', 'fr', 'it'] as const;
 export type SupportedLanguage = (typeof supportedLanguages)[number];
 
 export const rtlLanguages: SupportedLanguage[] = ['he', 'ar'];
 
 export const languageOptions: Array<{ value: SupportedLanguage; label: string; compactLabel: string }> = [
+  { value: 'pt-BR', label: 'Português (BR)', compactLabel: 'PT' },
   { value: 'en', label: 'English', compactLabel: 'EN' },
   { value: 'es', label: 'Español', compactLabel: 'ES' },
   { value: 'he', label: 'עברית', compactLabel: 'עברית' },
@@ -29,19 +31,20 @@ export const languageOptions: Array<{ value: SupportedLanguage; label: string; c
 ];
 
 export function resolveSupportedLanguage(lang?: string): SupportedLanguage {
-  const value = lang || 'en';
+  const value = lang || 'pt-BR';
   const exact = supportedLanguages.find(supported => supported.toLowerCase() === value.toLowerCase());
   if (exact) return exact;
 
   const parts = value.toLowerCase().split('-');
   const base = parts[0];
+  if (base === 'pt') return 'pt-BR';
   if (base === 'zh') {
     const subtags = new Set(parts.slice(1));
     if (subtags.has('hant') || subtags.has('hk') || subtags.has('mo') || subtags.has('tw')) return 'zh-HK';
     return 'zh-CN';
   }
 
-  return supportedLanguages.find(supported => supported === base) ?? 'en';
+  return supportedLanguages.find(supported => supported === base) ?? 'pt-BR';
 }
 
 void i18n
@@ -49,6 +52,7 @@ void i18n
   .use(initReactI18next)
   .init({
     resources: {
+      'pt-BR': { translation: ptBR },
       en: { translation: en },
       es: { translation: es },
       he: { translation: he },
@@ -59,13 +63,16 @@ void i18n
       fr: { translation: fr },
       it: { translation: it },
     },
-    fallbackLng: 'en',
+    fallbackLng: 'pt-BR',
     supportedLngs: supportedLanguages as unknown as string[],
     nonExplicitSupportedLngs: false,
     interpolation: { escapeValue: false },
     detection: {
-      order: ['localStorage', 'navigator'],
-      lookupLocalStorage: 'openwa_language',
+      // Português (BR) é o idioma padrão da plataforma. Só o que o usuário escolher
+      // explicitamente (persistido em localStorage) muda isso; sem escolha => pt-BR.
+      // Chave nova ('openwa_lang') para ignorar caches antigos que podiam estar em 'en'.
+      order: ['localStorage'],
+      lookupLocalStorage: 'openwa_lang',
       caches: ['localStorage'],
       convertDetectedLanguage: (lang: string) => resolveSupportedLanguage(lang),
     },
