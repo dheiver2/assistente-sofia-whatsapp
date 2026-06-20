@@ -149,7 +149,7 @@ export class AutoReplyPlugin implements IPlugin {
           model,
           stream: false,
           messages: [{ role: 'system', content: systemPrompt }, ...history, { role: 'user', content: userText }],
-          options: { temperature: 0.7, num_predict: 320 },
+          options: { temperature: 0.7, num_predict: 140 },
         }),
         signal: controller.signal,
       });
