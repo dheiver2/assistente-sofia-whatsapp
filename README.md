@@ -71,7 +71,24 @@ Basta editar `AI_SYSTEM_PROMPT` no compose e recriar o container (não precisa r
 docker compose -f docker-compose.dev.yml up -d
 ```
 
-### Identidade por sessão/número (`data/personas.json`)
+### Várias empresas, cada uma com sua IA (pelo dashboard)
+
+O sistema é multi-empresa: **cada empresa = uma sessão/número**, com a sua própria IA de atendimento.
+Jornada no dashboard:
+
+1. **Criar a sessão** da empresa (informe um nome, ex.: `pizzaria-bella`).
+2. No card da sessão, clique em **IA** e preencha:
+   - **Personalidade / instruções** — quem é a IA, tom de voz e regras.
+   - **Conhecimento da empresa** — serviços, produtos, horários, FAQ (a IA usa isso e é orientada a não inventar).
+   - **Saudação inicial fixa** (opcional) — enviada uma vez no primeiro contato.
+   - **Modelo de IA** (opcional) — um modelo Ollama específico; vazio = padrão global.
+3. **Conectar o QR** e ativar o plugin `auto-reply` — a IA daquela empresa está no ar.
+
+Cada empresa tem persona, conhecimento, modelo e **memória de conversa isolados**. A config fica em
+`Session.config.ai` (API: `GET`/`PUT /api/sessions/:id/ai`). Após atualizar o build, dê um hard-refresh
+no dashboard para carregar o botão **IA**.
+
+### Identidade por sessão via arquivo (`data/personas.json`, alternativa)
 
 Cada número conectado pode ter a sua própria IA. Crie `data/personas.json` (use o
 [`personas.example.json`](personas.example.json) como base) mapeando o **nome da sessão**
