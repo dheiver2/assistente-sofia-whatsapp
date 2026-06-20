@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { AlertTriangle, Check, Copy, Edit, FileText, Loader2, Plus, Trash2, X } from 'lucide-react';
+import { AlertTriangle, BookOpen, Check, Copy, Edit, FileText, Loader2, Plus, Trash2, X } from 'lucide-react';
 import { type MessageTemplate, type TemplatePayload } from '../services/api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useRole } from '../hooks/useRole';
@@ -13,6 +13,7 @@ import {
 } from '../hooks/queries';
 import { PageHeader } from '../components/PageHeader';
 import { copyToClipboard } from '../utils/clipboard';
+import { TEMPLATE_LIBRARY, LIBRARY_CATEGORIES, type LibraryTemplate } from '../data/templateLibrary';
 import './Templates.css';
 
 type TemplateForm = {
@@ -61,6 +62,8 @@ export function Templates() {
   const [deleteTarget, setDeleteTarget] = useState<MessageTemplate | null>(null);
   const [toast, setToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
   const [previewValues, setPreviewValues] = useState<Record<string, string>>({});
+  const [showLibrary, setShowLibrary] = useState(false);
+  const [libCategory, setLibCategory] = useState('');
 
   const { data: templates = [], isLoading: loadingTemplates } = useTemplatesQuery(selectedSessionId, !!selectedSessionId);
   const createMutation = useCreateTemplateMutation();
@@ -71,6 +74,10 @@ export function Templates() {
   const placeholders = useMemo(() => extractPlaceholders(form), [form]);
   const preview = useMemo(() => renderPreview(form, previewValues), [form, previewValues]);
   const isSaving = createMutation.isPending || updateMutation.isPending;
+
+  const filteredLibrary = libCategory
+    ? TEMPLATE_LIBRARY.filter(t => t.category === libCategory)
+    : TEMPLATE_LIBRARY;
 
   useEffect(() => {
     if (!selectedSessionId && sessions.length > 0) {
@@ -163,6 +170,23 @@ export function Templates() {
     }
   };
 
+  const importTemplate = async (tpl: LibraryTemplate) => {
+    if (!selectedSessionId) {
+      setToast({ type: 'error', message: 'Selecione uma sessão primeiro' });
+      return;
+    }
+    try {
+      await createMutation.mutateAsync({
+        sessionId: selectedSessionId,
+        data: { name: tpl.name, header: tpl.header ?? null, body: tpl.body, footer: tpl.footer ?? null },
+      });
+      setToast({ type: 'success', message: `Template "${tpl.name}" importado` });
+      setShowLibrary(false);
+    } catch (e) {
+      setToast({ type: 'error', message: e instanceof Error ? e.message : 'Erro ao importar' });
+    }
+  };
+
   if (loadingSessions) {
     return (
       <div className="templates-page templates-loading">
@@ -187,21 +211,27 @@ export function Templates() {
         title={t('templates.title')}
         subtitle={t('templates.subtitle')}
         actions={
-          <select
-            className="templates-session-select"
-            value={selectedSessionId}
-            onChange={event => {
-              setSelectedSessionId(event.target.value);
-              resetForm();
-            }}
-          >
-            {sessions.length === 0 && <option value="">{t('templates.noSessions')}</option>}
-            {sessions.map(session => (
-              <option key={session.id} value={session.id}>
-                {session.name}
-              </option>
-            ))}
-          </select>
+          <>
+            <button className="btn-secondary" onClick={() => setShowLibrary(true)}>
+              <BookOpen size={16} />
+              Biblioteca
+            </button>
+            <select
+              className="templates-session-select"
+              value={selectedSessionId}
+              onChange={event => {
+                setSelectedSessionId(event.target.value);
+                resetForm();
+              }}
+            >
+              {sessions.length === 0 && <option value="">{t('templates.noSessions')}</option>}
+              {sessions.map(session => (
+                <option key={session.id} value={session.id}>
+                  {session.name}
+                </option>
+              ))}
+            </select>
+          </>
         }
       />
 
@@ -390,6 +420,59 @@ export function Templates() {
                 {deleteMutation.isPending ? <Loader2 size={18} className="animate-spin" /> : <Trash2 size={18} />}
                 {t('common.delete')}
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showLibrary && (
+        <div className="library-overlay" onClick={() => setShowLibrary(false)}>
+          <div className="library-modal" onClick={event => event.stopPropagation()}>
+            <div className="library-header">
+              <h2>📚 Biblioteca de Modelos</h2>
+              <button className="btn-icon" onClick={() => setShowLibrary(false)} aria-label={t('common.close')}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="library-cats">
+              <button
+                className={`lib-cat${libCategory === '' ? ' active' : ''}`}
+                onClick={() => setLibCategory('')}
+              >
+                Todos
+              </button>
+              {LIBRARY_CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  className={`lib-cat${libCategory === cat ? ' active' : ''}`}
+                  onClick={() => setLibCategory(cat)}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+            <div className="library-grid">
+              {filteredLibrary.map(tpl => (
+                <div key={tpl.name} className="lib-card">
+                  <div className="lib-card-top">
+                    <span className="lib-card-icon">{tpl.icon}</span>
+                    <span className="lib-card-name">{tpl.name}</span>
+                  </div>
+                  <p className="lib-card-body">
+                    {tpl.body.length > 80 ? tpl.body.slice(0, 80) + '…' : tpl.body}
+                  </p>
+                  <div className="lib-card-footer">
+                    <button
+                      className="btn-primary"
+                      style={{ fontSize: '0.8rem', padding: '6px 14px' }}
+                      onClick={() => void importTemplate(tpl)}
+                      disabled={!canWrite || isSaving}
+                    >
+                      Importar
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>

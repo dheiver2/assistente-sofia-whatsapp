@@ -7,6 +7,7 @@ import { useToast } from '../components/Toast';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useRole } from '../hooks/useRole';
 import { PageHeader } from '../components/PageHeader';
+import { PERSONA_PRESETS } from '../data/personaLibrary';
 import './Sessions.css';
 
 export function Sessions() {
@@ -607,6 +608,24 @@ export function Sessions() {
                     />
                     <span>{t('sessions.ai.enabled')}</span>
                   </label>
+
+                  <div className="form-group">
+                    <label>Modelos de persona</label>
+                    <div className="preset-chips" style={{ marginBottom: 10 }}>
+                      {PERSONA_PRESETS.map(p => (
+                        <button
+                          key={p.label}
+                          type="button"
+                          className="preset-chip"
+                          onClick={() => {
+                            setAiConfig(c => ({ ...c, persona: p.persona, knowledge: p.knowledge, greeting: p.greeting }));
+                          }}
+                        >
+                          {p.icon} {p.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
 
                   <div className="form-group">
                     <label>{t('sessions.ai.personaLabel')}</label>

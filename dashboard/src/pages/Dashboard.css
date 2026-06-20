@@ -360,3 +360,104 @@
     gap: 0.5rem;
   }
 }
+
+/* ── Use Cases Section ── */
+.use-cases-section {
+  margin-top: 32px;
+  padding: 0 2rem 2rem;
+}
+
+.use-cases-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+  margin: 0 0 16px;
+}
+
+.use-cases-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.use-case-card {
+  display: flex;
+  gap: 14px;
+  padding: 18px;
+  border: 1px solid var(--border, #e2e8f0);
+  border-radius: 12px;
+  background: var(--bg-white, #fff);
+  box-shadow: var(--shadow-sm, 0 1px 2px rgba(0,0,0,0.05));
+}
+
+.uc-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  line-height: 1;
+  margin-top: 2px;
+}
+
+.uc-content h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary, #0f172a);
+}
+
+.uc-content > p {
+  margin: 0 0 10px;
+  font-size: 0.83rem;
+  color: var(--text-muted, #64748b);
+  line-height: 1.5;
+}
+
+.uc-steps {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  list-style: decimal;
+}
+
+.uc-steps li {
+  font-size: 0.8rem;
+  color: var(--text-primary, #0f172a);
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.uc-result {
+  font-size: 0.8rem;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--bg-light, #f8fafc);
+  border-left: 3px solid var(--primary, #25d366);
+  color: var(--text-primary, #0f172a);
+}
+
+.uc-result-label {
+  font-weight: 600;
+  color: var(--primary, #25d366);
+}
+
+[data-theme='dark'] .use-case-card {
+  background: var(--bg-white, #1e293b);
+  border-color: var(--border, #334155);
+}
+
+[data-theme='dark'] .uc-result {
+  background: var(--bg-light, #0f172a);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .use-case-card {
+    background: var(--bg-white, #1e293b);
+    border-color: var(--border, #334155);
+  }
+  :root:not([data-theme='light']) .uc-result {
+    background: var(--bg-light, #0f172a);
+  }
+}
+
+@media (max-width: 680px) {
+  .use-cases-grid { grid-template-columns: 1fr; }
+  .use-cases-section { padding: 0 1rem 1.5rem; }
+}
