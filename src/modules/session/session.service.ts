@@ -11,7 +11,7 @@ import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, In, Not, IsNull, DataSource, FindManyOptions } from 'typeorm';
 import { Session, SessionStatus } from './entities/session.entity';
 import { Message, MessageDirection, MessageStatus } from '../message/entities/message.entity';
-import { CreateSessionDto } from './dto';
+import { CreateSessionDto, AiConfig } from './dto';
 import { EngineFactory } from '../../engine/engine.factory';
 import {
   IWhatsAppEngine,
@@ -299,6 +299,25 @@ export class SessionService implements OnModuleDestroy, OnModuleInit, OnApplicat
       throw new NotFoundException(`Session with id '${id}' not found`);
     }
     return this.attachLastError(session);
+  }
+
+  /** Configuração da IA de atendimento desta sessão (Session.config.ai). */
+  async getAiConfig(id: string): Promise<AiConfig> {
+    const session = await this.findOne(id);
+    const cfg = (session.config ?? {}) as Record<string, unknown>;
+    return (cfg.ai as AiConfig | undefined) ?? {};
+  }
+
+  /** Atualiza (merge) a configuração da IA desta sessão e persiste. */
+  async setAiConfig(id: string, patch: AiConfig): Promise<AiConfig> {
+    const session = await this.findOne(id);
+    const config = { ...(session.config ?? {}) } as Record<string, unknown>;
+    const current = (config.ai as AiConfig | undefined) ?? {};
+    const ai: AiConfig = { ...current, ...patch };
+    config.ai = ai;
+    session.config = config;
+    await this.sessionRepository.save(session);
+    return ai;
   }
 
   /**

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
-import { Plus, QrCode, RefreshCw, Trash2, Eye, Loader2, Play, Square, X, Search, Filter, Skull } from 'lucide-react';
-import { sessionApi, type Session } from '../services/api';
+import { Plus, QrCode, RefreshCw, Trash2, Eye, Loader2, Play, Square, X, Search, Filter, Skull, Bot } from 'lucide-react';
+import { sessionApi, type Session, type AiConfig } from '../services/api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useToast } from '../components/Toast';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -26,6 +26,48 @@ export function Sessions() {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [killConfirmId, setKillConfirmId] = useState<string | null>(null);
+  // IA de atendimento por sessão (uma empresa = uma sessão)
+  const [aiSession, setAiSession] = useState<Session | null>(null);
+  const [aiConfig, setAiConfig] = useState<AiConfig>({});
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSaving, setAiSaving] = useState(false);
+
+  const openAiModal = useCallback(
+    async (session: Session) => {
+      setAiSession(session);
+      setAiConfig({});
+      setAiLoading(true);
+      try {
+        const cfg = await sessionApi.getAi(session.id);
+        setAiConfig(cfg ?? {});
+      } catch {
+        setAiConfig({});
+      } finally {
+        setAiLoading(false);
+      }
+    },
+    [],
+  );
+
+  const saveAiConfig = useCallback(async () => {
+    if (!aiSession) return;
+    setAiSaving(true);
+    try {
+      await sessionApi.updateAi(aiSession.id, {
+        enabled: aiConfig.enabled !== false,
+        persona: aiConfig.persona ?? '',
+        knowledge: aiConfig.knowledge ?? '',
+        model: aiConfig.model ?? '',
+        greeting: aiConfig.greeting ?? '',
+      });
+      toast.success('IA salva', `Atendente de IA de "${aiSession.name}" atualizado.`);
+      setAiSession(null);
+    } catch (err) {
+      toast.error('Erro ao salvar', err instanceof Error ? err.message : 'Tente novamente.');
+    } finally {
+      setAiSaving(false);
+    }
+  }, [aiSession, aiConfig, toast]);
 
   const fetchSessions = useCallback(async (): Promise<Session[]> => {
     try {
@@ -508,6 +550,93 @@ export function Sessions() {
         </div>
       )}
 
+      {/* Configuração da IA de atendimento (uma empresa = uma sessão) */}
+      {aiSession && (
+        <div className="modal-overlay" onClick={() => setAiSession(null)}>
+          <div className="modal ai-modal" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>
+                <Bot size={18} style={{ verticalAlign: 'text-bottom', marginRight: 6 }} />
+                IA de atendimento — {aiSession.name}
+              </h2>
+              <button className="btn-icon" onClick={() => setAiSession(null)}>
+                <X size={20} />
+              </button>
+            </div>
+            <div className="modal-body">
+              {aiLoading ? (
+                <div className="ai-loading">
+                  <Loader2 size={20} className="spin" /> Carregando…
+                </div>
+              ) : (
+                <>
+                  <label className="ai-toggle">
+                    <input
+                      type="checkbox"
+                      checked={aiConfig.enabled !== false}
+                      onChange={e => setAiConfig(c => ({ ...c, enabled: e.target.checked }))}
+                    />
+                    <span>IA ativada para esta empresa</span>
+                  </label>
+
+                  <div className="form-group">
+                    <label>Personalidade / instruções</label>
+                    <textarea
+                      rows={6}
+                      placeholder="Ex.: Você é a Bia, atendente da Empresa X. Tom acolhedor e profissional. Apresente-se só no primeiro contato…"
+                      value={aiConfig.persona ?? ''}
+                      onChange={e => setAiConfig(c => ({ ...c, persona: e.target.value }))}
+                    />
+                    <small>Quem é a IA, tom de voz e regras. Vazio = usa a persona padrão global.</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Conhecimento da empresa</label>
+                    <textarea
+                      rows={6}
+                      placeholder="Serviços, produtos, horários, diferenciais, FAQ… a IA usa isso para responder com informação real."
+                      value={aiConfig.knowledge ?? ''}
+                      onChange={e => setAiConfig(c => ({ ...c, knowledge: e.target.value }))}
+                    />
+                    <small>Injetado no contexto da IA. Ela é orientada a não inventar o que não estiver aqui.</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Saudação inicial fixa (opcional)</label>
+                    <textarea
+                      rows={2}
+                      placeholder="Ex.: Olá! Você está falando com o atendimento da Empresa X 👋"
+                      value={aiConfig.greeting ?? ''}
+                      onChange={e => setAiConfig(c => ({ ...c, greeting: e.target.value }))}
+                    />
+                    <small>Enviada uma vez, no primeiro contato, antes da resposta da IA.</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label>Modelo de IA (opcional)</label>
+                    <input
+                      type="text"
+                      placeholder="qwen2.5:7b-instruct"
+                      value={aiConfig.model ?? ''}
+                      onChange={e => setAiConfig(c => ({ ...c, model: e.target.value }))}
+                    />
+                    <small>Tag de um modelo Ollama. Vazio = usa o modelo padrão do sistema.</small>
+                  </div>
+                </>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button className="btn-secondary" onClick={() => setAiSession(null)} disabled={aiSaving}>
+                {t('common.cancel')}
+              </button>
+              <button className="btn-primary" onClick={() => void saveAiConfig()} disabled={aiSaving || aiLoading}>
+                {aiSaving ? <Loader2 size={16} className="spin" /> : null} Salvar IA
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <div className="sessions-grid">
         {filteredSessions.length === 0 ? (
           <div className="empty-state">
@@ -565,6 +694,12 @@ export function Sessions() {
                   <Eye size={16} />
                   {t('sessions.actions.view')}
                 </button>
+                {canWrite && (
+                  <button className="btn-action" onClick={() => void openAiModal(session)} title="Configurar IA de atendimento">
+                    <Bot size={16} />
+                    IA
+                  </button>
+                )}
                 {canWrite &&
                 (session.status === 'created' || session.status === 'idle' || session.status === 'disconnected') ? (
                   <button className="btn-action" onClick={() => handleStart(session.id)}>

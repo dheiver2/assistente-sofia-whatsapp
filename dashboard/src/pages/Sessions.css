@@ -740,3 +740,63 @@
 .btn-sm:hover {
   background: var(--primary-hover);
 }
+
+/* ===== IA de atendimento por sessão ===== */
+.ai-modal {
+  max-width: 640px;
+  width: 100%;
+}
+.ai-modal .modal-body {
+  max-height: 70vh;
+  overflow-y: auto;
+}
+.ai-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 24px 0;
+  color: var(--text-secondary, #888);
+}
+.ai-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.ai-modal .form-group {
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.ai-modal .form-group label {
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+.ai-modal .form-group small {
+  color: var(--text-secondary, #888);
+  font-size: 0.78rem;
+}
+.ai-modal textarea,
+.ai-modal input[type='text'] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--border-color, #333);
+  border-radius: 8px;
+  background: var(--input-bg, var(--bg-secondary, #1a1a1a));
+  color: var(--text-primary, #eee);
+  font-family: inherit;
+  font-size: 0.9rem;
+  resize: vertical;
+  box-sizing: border-box;
+}
+.ai-modal textarea:focus,
+.ai-modal input[type='text']:focus {
+  outline: none;
+  border-color: var(--primary, #4f8cff);
+}
+.spin {
+  animation: spin 1s linear infinite;
+}

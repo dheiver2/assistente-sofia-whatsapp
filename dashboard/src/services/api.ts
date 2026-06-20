@@ -332,7 +332,19 @@ export const sessionApi = {
     request<{ messages: ChatMessage[]; total: number }>(
       `/sessions/${id}/messages?chatId=${encodeURIComponent(chatId)}&limit=${limit}`,
     ),
+  getAi: (id: string) => request<AiConfig>(`/sessions/${id}/ai`),
+  updateAi: (id: string, config: AiConfig) =>
+    request<AiConfig>(`/sessions/${id}/ai`, { method: 'PUT', body: JSON.stringify(config) }),
 };
+
+// AI attendant config per session (one company = one session).
+export interface AiConfig {
+  enabled?: boolean;
+  persona?: string;
+  knowledge?: string;
+  model?: string;
+  greeting?: string;
+}
 
 // =============================================================================
 // Webhook API

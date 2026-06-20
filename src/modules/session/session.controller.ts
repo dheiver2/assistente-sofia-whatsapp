@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Get, Post, Put, Delete, Param, Body, HttpCode, HttpStatus } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiParam } from '@nestjs/swagger';
 import { SessionService } from './session.service';
 import {
@@ -10,6 +10,7 @@ import {
   SendChatStateDto,
   RequestPairingCodeDto,
   PairingCodeResponseDto,
+  AiConfigDto,
 } from './dto';
 import { Session } from './entities/session.entity';
 import { ChatSummary } from '../../engine/interfaces/whatsapp-engine.interface';
@@ -86,6 +87,27 @@ export class SessionController {
   async findOne(@Param('id') id: string): Promise<SessionResponseDto> {
     const session = await this.sessionService.findOne(id);
     return this.transformSession(session);
+  }
+
+  @Get(':id/ai')
+  @ApiOperation({ summary: 'Get the AI attendant config for a session' })
+  @ApiParam({ name: 'id', description: 'Session ID' })
+  @ApiResponse({ status: 200, description: 'AI config' })
+  @ApiResponse({ status: 404, description: 'Session not found' })
+  async getAiConfig(@Param('id') id: string): Promise<AiConfigDto> {
+    return this.sessionService.getAiConfig(id);
+  }
+
+  @Put(':id/ai')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @ApiOperation({ summary: 'Update the AI attendant config for a session (one company = one session)' })
+  @ApiParam({ name: 'id', description: 'Session ID' })
+  @ApiResponse({ status: 200, description: 'AI config updated' })
+  @ApiResponse({ status: 404, description: 'Session not found' })
+  async updateAiConfig(@Param('id') id: string, @Body() dto: AiConfigDto): Promise<AiConfigDto> {
+    const ai = await this.sessionService.setAiConfig(id, dto);
+    await this.auditService.logInfo(AuditAction.SESSION_UPDATED, { sessionId: id });
+    return ai;
   }
 
   @Delete(':id')

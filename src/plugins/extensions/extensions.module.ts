@@ -2,7 +2,7 @@ import { Injectable, Module, OnModuleInit } from '@nestjs/common';
 import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PluginLoaderService, PluginManifest, PluginType } from '../../core/plugins';
-import { AutoReplyPlugin } from './auto-reply';
+import { AutoReplyPlugin, SessionAi } from './auto-reply';
 import { TranslationPlugin } from './translation';
 import { Session } from '../../modules/session/entities/session.entity';
 import { createLogger } from '../../common/services/logger.service';
@@ -33,12 +33,13 @@ export class ExtensionsRegistrar implements OnModuleInit {
       sessions: ['*'],
     };
 
-    // Resolver de UUID -> nome da sessão, para o auto-reply escolher a persona por sessão.
-    const resolveSessionName = async (sessionId: string): Promise<string | null> => {
-      const row = await this.sessionRepo.findOne({ where: { id: sessionId }, select: ['name'] });
-      return row?.name ?? null;
+    // Resolver de UUID -> { nome, config de IA } da sessão, para o auto-reply montar a IA por empresa.
+    const resolveSession = async (sessionId: string): Promise<{ name: string | null; ai: SessionAi | null }> => {
+      const row = await this.sessionRepo.findOne({ where: { id: sessionId }, select: ['name', 'config'] });
+      const ai = (row?.config as Record<string, unknown> | undefined)?.ai as SessionAi | undefined;
+      return { name: row?.name ?? null, ai: ai ?? null };
     };
-    this.pluginLoader.registerBuiltInPlugin(autoReplyManifest, new AutoReplyPlugin(resolveSessionName));
+    this.pluginLoader.registerBuiltInPlugin(autoReplyManifest, new AutoReplyPlugin(resolveSession));
     this.logger.log('Auto-reply reference plugin registered (disabled)');
 
     const translationManifest: PluginManifest = {

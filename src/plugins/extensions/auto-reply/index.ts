@@ -1,27 +1,21 @@
 /**
- * AI auto-reply extension plugin — multi-persona + memória de conversa.
+ * AI auto-reply extension plugin — multi-empresa (uma empresa = uma sessão).
  *
  * Responde mensagens diretas (1:1) com um LLM open-source local (Ollama). Cada SESSÃO/número
- * pode ter sua própria identidade de IA: um arquivo JSON (default /app/data/personas.json) mapeia
- * o nome da sessão (o que você escolhe ao criar no QR) para o system prompt daquela IA. Sem entrada
- * definida, usa a persona padrão (AI_SYSTEM_PROMPT). Mantém histórico por sessão+contato, persistido
- * via context.storage (sobrevive a reinícios), dando contexto/memória ao modelo.
+ * tem a sua própria IA de atendimento, configurada no dashboard e persistida em Session.config.ai
+ * (personalidade, conhecimento da empresa, modelo e saudação). Mantém histórico por sessão+contato
+ * (persistido via context.storage, sobrevive a reinícios), dando contexto/memória ao modelo.
  *
- * personas.json:
- *   {
- *     "default": "(opcional) sobrescreve a persona padrão para sessões sem entrada própria",
- *     "sessions": {
- *       "vendas":  "Você é a Bia, consultora comercial ...",
- *       "suporte": "Você é o Téo, suporte técnico ..."
- *     }
- *   }
- * As chaves de "sessions" podem ser o NOME da sessão ou o UUID dela.
+ * Fontes da persona, em ordem:
+ *   1. Session.config.ai.persona  (configurado no dashboard, por empresa)
+ *   2. data/personas.json         (mapa por nome/uuid de sessão — fallback opcional)
+ *   3. AI_SYSTEM_PROMPT           (persona global padrão)
  *
  * Config via env (with defaults):
  *   OLLAMA_URL / OLLAMA_MODEL / OLLAMA_TIMEOUT_MS — conexão ao modelo
  *   AI_HISTORY_TURNS   nº de turnos lembrados por conversa (default 8)
- *   AI_PERSONAS_FILE   caminho do mapa de personas (default /app/data/personas.json)
- *   AI_SYSTEM_PROMPT   persona padrão (fallback global)
+ *   AI_PERSONAS_FILE   caminho do mapa de personas de fallback (default /app/data/personas.json)
+ *   AI_SYSTEM_PROMPT   persona global padrão
  */
 import * as fs from 'fs';
 import { PluginContext, IPlugin } from '../../../core/plugins';
@@ -42,14 +36,28 @@ const FALLBACK = 'Desculpe, estou com dificuldade para responder agora. Pode ten
 type ChatTurn = { role: 'user' | 'assistant'; content: string };
 type PersonasFile = { default?: string; sessions?: Record<string, string> };
 
-/** Resolve o nome da sessão a partir do seu id (UUID). Injetado pelo registrar. */
-export type SessionNameResolver = (sessionId: string) => Promise<string | null>;
+/** Config da IA de uma sessão (espelha Session.config.ai). */
+export interface SessionAi {
+  enabled?: boolean;
+  persona?: string;
+  knowledge?: string;
+  model?: string;
+  greeting?: string;
+}
+/** Resolve a sessão (nome + config de IA) a partir do seu id (UUID). Injetado pelo registrar. */
+export type SessionResolver = (sessionId: string) => Promise<{ name: string | null; ai: SessionAi | null }>;
+
+interface ResolvedProfile {
+  systemPrompt: string;
+  model: string;
+  greeting?: string;
+  enabled: boolean;
+}
 
 export class AutoReplyPlugin implements IPlugin {
   private personasCache: { mtimeMs: number; data: PersonasFile } | null = null;
-  private readonly nameCache = new Map<string, string | null>();
 
-  constructor(private readonly resolveSessionName?: SessionNameResolver) {}
+  constructor(private readonly resolveSession?: SessionResolver) {}
 
   onEnable(context: PluginContext): Promise<void> {
     context.registerHook('message:received', ctx => this.onMessage(context, ctx as HookContext<IncomingMessage>));
@@ -59,7 +67,7 @@ export class AutoReplyPlugin implements IPlugin {
     return Promise.resolve();
   }
 
-  /** Lê o personas.json com cache por mtime (recarrega quando o arquivo muda). */
+  /** Lê o personas.json (fallback) com cache por mtime. */
   private loadPersonas(): PersonasFile {
     try {
       const stat = fs.statSync(PERSONAS_FILE);
@@ -69,37 +77,38 @@ export class AutoReplyPlugin implements IPlugin {
       }
       return this.personasCache.data;
     } catch {
-      // Arquivo ausente/ inválido → sem personas por sessão; usa o padrão.
       return {};
     }
   }
 
-  private async sessionName(sessionId: string): Promise<string | null> {
-    if (this.nameCache.has(sessionId)) {
-      return this.nameCache.get(sessionId) ?? null;
-    }
+  /** Monta o perfil de IA efetivo desta sessão (empresa). */
+  private async resolveProfile(sessionId: string): Promise<ResolvedProfile> {
     let name: string | null = null;
+    let ai: SessionAi | null = null;
     try {
-      name = this.resolveSessionName ? await this.resolveSessionName(sessionId) : null;
+      if (this.resolveSession) {
+        const r = await this.resolveSession(sessionId);
+        name = r.name;
+        ai = r.ai;
+      }
     } catch {
-      name = null;
+      /* segue com fallbacks */
     }
-    this.nameCache.set(sessionId, name);
-    return name;
-  }
 
-  /** Persona desta sessão: sessions[nome] → sessions[uuid] → default do arquivo → AI_SYSTEM_PROMPT. */
-  private async resolvePersona(sessionId: string): Promise<string> {
     const personas = this.loadPersonas();
-    const byId = personas.sessions?.[sessionId];
-    if (byId) {
-      return byId;
+    const fromFile = personas.sessions?.[sessionId] ?? (name ? personas.sessions?.[name] : undefined);
+
+    let systemPrompt = ai?.persona?.trim() || fromFile || personas.default || DEFAULT_PROMPT;
+    if (ai?.knowledge?.trim()) {
+      systemPrompt += `\n\nInformações e conhecimento da empresa (use para responder com precisão; não invente o que não estiver aqui):\n${ai.knowledge.trim()}`;
     }
-    const name = await this.sessionName(sessionId);
-    if (name && personas.sessions?.[name]) {
-      return personas.sessions[name];
-    }
-    return personas.default ?? DEFAULT_PROMPT;
+
+    return {
+      systemPrompt,
+      model: ai?.model?.trim() || OLLAMA_MODEL,
+      greeting: ai?.greeting?.trim() || undefined,
+      enabled: ai?.enabled !== false, // default: ligado
+    };
   }
 
   private historyKey(sessionId: string, chatId: string): string {
@@ -116,7 +125,7 @@ export class AutoReplyPlugin implements IPlugin {
     await context.storage.set(key, history.slice(-HISTORY_TURNS * 2));
   }
 
-  private async generate(systemPrompt: string, history: ChatTurn[], userText: string): Promise<string> {
+  private async generate(model: string, systemPrompt: string, history: ChatTurn[], userText: string): Promise<string> {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
     try {
@@ -124,7 +133,7 @@ export class AutoReplyPlugin implements IPlugin {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          model: OLLAMA_MODEL,
+          model,
           stream: false,
           messages: [{ role: 'system', content: systemPrompt }, ...history, { role: 'user', content: userText }],
           options: { temperature: 0.7, num_predict: 320 },
@@ -162,19 +171,26 @@ export class AutoReplyPlugin implements IPlugin {
     const chatId = message.chatId;
     const key = this.historyKey(sessionId, chatId);
     try {
-      const persona = await this.resolvePersona(sessionId);
+      const profile = await this.resolveProfile(sessionId);
+      if (!profile.enabled) {
+        return { continue: true }; // IA desligada para esta empresa/sessão
+      }
+
       const history = await this.loadHistory(context, key);
+      const firstContact = history.length === 0;
 
       let reply: string;
       try {
-        reply = await this.generate(persona, history, body);
+        reply = await this.generate(profile.model, profile.systemPrompt, history, body);
       } catch (aiErr) {
         context.logger.warn('AI generation failed; sending fallback', { error: String(aiErr) });
         await context.messages.reply(sessionId, chatId, message.id, FALLBACK);
         return { continue: true }; // não grava fallback no histórico
       }
 
-      await context.messages.reply(sessionId, chatId, message.id, reply);
+      // Saudação inicial fixa: prefixa a primeira resposta da conversa.
+      const outbound = firstContact && profile.greeting ? `${profile.greeting}\n\n${reply}` : reply;
+      await context.messages.reply(sessionId, chatId, message.id, outbound);
 
       history.push({ role: 'user', content: body }, { role: 'assistant', content: reply });
       await this.saveHistory(context, key, history);
