@@ -60,14 +60,14 @@ export function Sessions() {
         model: aiConfig.model ?? '',
         greeting: aiConfig.greeting ?? '',
       });
-      toast.success('IA salva', `Atendente de IA de "${aiSession.name}" atualizado.`);
+      toast.success(t('sessions.ai.savedTitle'), t('sessions.ai.savedDesc', { name: aiSession.name }));
       setAiSession(null);
     } catch (err) {
-      toast.error('Erro ao salvar', err instanceof Error ? err.message : 'Tente novamente.');
+      toast.error(t('sessions.ai.errorTitle'), err instanceof Error ? err.message : t('sessions.ai.errorDesc'));
     } finally {
       setAiSaving(false);
     }
-  }, [aiSession, aiConfig, toast]);
+  }, [aiSession, aiConfig, toast, t]);
 
   const fetchSessions = useCallback(async (): Promise<Session[]> => {
     try {
@@ -557,7 +557,7 @@ export function Sessions() {
             <div className="modal-header">
               <h2>
                 <Bot size={18} style={{ verticalAlign: 'text-bottom', marginRight: 6 }} />
-                IA de atendimento — {aiSession.name}
+                {t('sessions.ai.modalTitle', { name: aiSession.name })}
               </h2>
               <button className="btn-icon" onClick={() => setAiSession(null)}>
                 <X size={20} />
@@ -566,7 +566,7 @@ export function Sessions() {
             <div className="modal-body">
               {aiLoading ? (
                 <div className="ai-loading">
-                  <Loader2 size={20} className="spin" /> Carregando…
+                  <Loader2 size={20} className="spin" /> {t('sessions.ai.loading')}
                 </div>
               ) : (
                 <>
@@ -576,51 +576,51 @@ export function Sessions() {
                       checked={aiConfig.enabled !== false}
                       onChange={e => setAiConfig(c => ({ ...c, enabled: e.target.checked }))}
                     />
-                    <span>IA ativada para esta empresa</span>
+                    <span>{t('sessions.ai.enabled')}</span>
                   </label>
 
                   <div className="form-group">
-                    <label>Personalidade / instruções</label>
+                    <label>{t('sessions.ai.personaLabel')}</label>
                     <textarea
                       rows={6}
-                      placeholder="Ex.: Você é a Bia, atendente da Empresa X. Tom acolhedor e profissional. Apresente-se só no primeiro contato…"
+                      placeholder={t('sessions.ai.personaPlaceholder')}
                       value={aiConfig.persona ?? ''}
                       onChange={e => setAiConfig(c => ({ ...c, persona: e.target.value }))}
                     />
-                    <small>Quem é a IA, tom de voz e regras. Vazio = usa a persona padrão global.</small>
+                    <small>{t('sessions.ai.personaHint')}</small>
                   </div>
 
                   <div className="form-group">
-                    <label>Conhecimento da empresa</label>
+                    <label>{t('sessions.ai.knowledgeLabel')}</label>
                     <textarea
                       rows={6}
-                      placeholder="Serviços, produtos, horários, diferenciais, FAQ… a IA usa isso para responder com informação real."
+                      placeholder={t('sessions.ai.knowledgePlaceholder')}
                       value={aiConfig.knowledge ?? ''}
                       onChange={e => setAiConfig(c => ({ ...c, knowledge: e.target.value }))}
                     />
-                    <small>Injetado no contexto da IA. Ela é orientada a não inventar o que não estiver aqui.</small>
+                    <small>{t('sessions.ai.knowledgeHint')}</small>
                   </div>
 
                   <div className="form-group">
-                    <label>Saudação inicial fixa (opcional)</label>
+                    <label>{t('sessions.ai.greetingLabel')}</label>
                     <textarea
                       rows={2}
-                      placeholder="Ex.: Olá! Você está falando com o atendimento da Empresa X 👋"
+                      placeholder={t('sessions.ai.greetingPlaceholder')}
                       value={aiConfig.greeting ?? ''}
                       onChange={e => setAiConfig(c => ({ ...c, greeting: e.target.value }))}
                     />
-                    <small>Enviada uma vez, no primeiro contato, antes da resposta da IA.</small>
+                    <small>{t('sessions.ai.greetingHint')}</small>
                   </div>
 
                   <div className="form-group">
-                    <label>Modelo de IA (opcional)</label>
+                    <label>{t('sessions.ai.modelLabel')}</label>
                     <input
                       type="text"
                       placeholder="qwen2.5:7b-instruct"
                       value={aiConfig.model ?? ''}
                       onChange={e => setAiConfig(c => ({ ...c, model: e.target.value }))}
                     />
-                    <small>Tag de um modelo Ollama. Vazio = usa o modelo padrão do sistema.</small>
+                    <small>{t('sessions.ai.modelHint')}</small>
                   </div>
                 </>
               )}
@@ -630,7 +630,7 @@ export function Sessions() {
                 {t('common.cancel')}
               </button>
               <button className="btn-primary" onClick={() => void saveAiConfig()} disabled={aiSaving || aiLoading}>
-                {aiSaving ? <Loader2 size={16} className="spin" /> : null} Salvar IA
+                {aiSaving ? <Loader2 size={16} className="spin" /> : null} {t('sessions.ai.save')}
               </button>
             </div>
           </div>
@@ -695,9 +695,9 @@ export function Sessions() {
                   {t('sessions.actions.view')}
                 </button>
                 {canWrite && (
-                  <button className="btn-action" onClick={() => void openAiModal(session)} title="Configurar IA de atendimento">
+                  <button className="btn-action" onClick={() => void openAiModal(session)} title={t('sessions.ai.configureTitle')}>
                     <Bot size={16} />
-                    IA
+                    {t('sessions.ai.button')}
                   </button>
                 )}
                 {canWrite &&
