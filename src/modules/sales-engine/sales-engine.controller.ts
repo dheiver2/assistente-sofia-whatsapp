@@ -103,6 +103,16 @@ export class SalesEngineController {
     return this.campaignService.autoRun(id, dto.leads);
   }
 
+  @Put('campaigns/:id/media')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @ApiOperation({ summary: 'Anexa mídia a uma campanha (imagem, vídeo, documento ou áudio)' })
+  attachMedia(
+    @Param('id') id: string,
+    @Body() body: { mediaUrl: string; mediaType: string },
+  ): Promise<Campaign> {
+    return this.campaignService.attachMedia(id, body.mediaUrl, body.mediaType as Campaign['mediaType']);
+  }
+
   @Post('campaigns/:id/pause')
   @RequireRole(ApiKeyRole.OPERATOR)
   @ApiOperation({ summary: 'Pausa o disparo da campanha' })

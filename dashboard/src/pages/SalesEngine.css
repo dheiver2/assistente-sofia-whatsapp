@@ -516,6 +516,42 @@
   border-top: 1px solid var(--border, #334155);
 }
 
+/* ── Mídia da campanha ── */
+.se-media-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  background: var(--bg-primary, #0f172a);
+  border: 1px solid var(--border, #334155);
+  border-radius: 10px;
+}
+.se-media-types {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.se-media-type-btn {
+  padding: 6px 14px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  font-weight: 500;
+  background: var(--bg-secondary, #1e293b);
+  border: 1px solid var(--border, #334155);
+  color: var(--text-primary, #e2e8f0);
+  cursor: pointer;
+  transition: border-color 0.15s, background 0.15s, color 0.15s;
+}
+.se-media-type-btn:hover {
+  border-color: var(--primary, #25d366);
+}
+.se-media-type-btn.active {
+  border-color: var(--primary, #25d366);
+  background: color-mix(in srgb, var(--primary, #25d366) 15%, var(--bg-secondary, #1e293b));
+  color: var(--primary, #25d366);
+  font-weight: 700;
+}
+
 /* ── Utils ── */
 .spin { animation: spin 0.8s linear infinite; }
 @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

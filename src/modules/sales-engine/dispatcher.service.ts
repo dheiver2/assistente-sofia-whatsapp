@@ -77,7 +77,21 @@ export class DispatcherService implements OnModuleInit, OnModuleDestroy {
         continue;
       }
       try {
-        await this.messages.sendText(o.sessionId, { chatId: `${phone}@c.us`, text: o.message });
+        const chatId = `${phone}@c.us`;
+        if (campaign.mediaUrl && campaign.mediaType) {
+          const mediaDto = { chatId, url: campaign.mediaUrl, caption: o.message };
+          if (campaign.mediaType === 'image') {
+            await this.messages.sendImage(o.sessionId, mediaDto);
+          } else if (campaign.mediaType === 'video') {
+            await this.messages.sendVideo(o.sessionId, mediaDto);
+          } else if (campaign.mediaType === 'document') {
+            await this.messages.sendDocument(o.sessionId, mediaDto);
+          } else if (campaign.mediaType === 'audio') {
+            await this.messages.sendAudio(o.sessionId, mediaDto);
+          }
+        } else {
+          await this.messages.sendText(o.sessionId, { chatId, text: o.message });
+        }
         await this.outreach.update(o.id, { stage: 'sent', error: null });
         void this.notifyCrm(campaign, { ...o, stage: 'sent' });
       } catch (err) {

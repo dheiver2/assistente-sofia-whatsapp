@@ -369,6 +369,8 @@ export interface Campaign {
   status: string;
   ratePerMinute: number;
   crmWebhookUrl: string | null;
+  mediaUrl: string | null;
+  mediaType: 'image' | 'video' | 'document' | 'audio' | null;
   createdAt: string;
 }
 export interface Outreach {
@@ -419,6 +421,8 @@ export const salesApi = {
       method: 'POST',
       body: JSON.stringify({ leads }),
     }),
+  attachMedia: (id: string, mediaUrl: string, mediaType: string) =>
+    request<Campaign>(`/sales/campaigns/${id}/media`, { method: 'PUT', body: JSON.stringify({ mediaUrl, mediaType }) }),
   pause: (id: string) => request<{ ok: boolean }>(`/sales/campaigns/${id}/pause`, { method: 'POST' }),
   resume: (id: string) => request<{ ok: boolean }>(`/sales/campaigns/${id}/resume`, { method: 'POST' }),
   progress: (id: string) =>

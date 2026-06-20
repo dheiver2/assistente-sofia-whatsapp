@@ -68,6 +68,12 @@ export class Campaign {
   @Column({ type: 'varchar', length: 500, nullable: true })
   crmWebhookUrl: string | null;
 
+  @Column({ type: 'varchar', length: 1000, nullable: true })
+  mediaUrl: string | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  mediaType: 'image' | 'video' | 'document' | 'audio' | null;
+
   @CreateDateColumn()
   createdAt: Date;
 

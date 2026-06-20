@@ -89,6 +89,10 @@ export function SalesEngine() {
   const [uploadPreview, setUploadPreview] = useState<Record<string, unknown>[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  /* mídia da campanha */
+  const [mediaUrl, setMediaUrl] = useState('');
+  const [mediaType, setMediaType] = useState<'image' | 'video' | 'document' | 'audio' | ''>('');
+
   /* postgres form */
   const [pgName, setPgName] = useState('');
   const [pgHost, setPgHost] = useState('');
@@ -203,8 +207,12 @@ export function SalesEngine() {
       }));
       const campaign = await salesApi.createCampaign({ sessionId, name: cName, offerHint: cOffer || undefined, ratePerMinute: cRate } as Partial<Campaign>);
       const result = await salesApi.autoRun(campaign.id, leads) as Record<string, unknown>;
+      if (mediaUrl && mediaType) {
+        await salesApi.attachMedia(campaign.id, mediaUrl, mediaType);
+      }
       toast.success('🚀 Campanha lançada!', `${String(result.generated ?? 0)} mensagens · ${String(result.approved ?? 0)} no disparo`);
       setCName(''); setCOffer(''); setCRate(6);
+      setMediaUrl(''); setMediaType('');
       setUploadedLeads([]); setUploadColumns([]); setUploadFileName(''); setUploadPreview([]); setRawRows([]);
       setWStep(0);
       setTab('campanhas');
@@ -489,6 +497,37 @@ export function SalesEngine() {
                 <label>Envios por minuto <span className="se-muted">(recomendado: 6)</span></label>
                 <input type="number" min={1} max={20} value={cRate} onChange={e => setCRate(Number(e.target.value))} />
               </div>
+              {/* Mídia opcional */}
+              <div className="se-media-section">
+                <label className="se-field" style={{marginBottom:0}}>
+                  <span style={{fontSize:12,fontWeight:600,color:'var(--text-muted,#94a3b8)',textTransform:'uppercase',letterSpacing:'0.04em'}}>
+                    Mídia da campanha <span style={{fontWeight:400,textTransform:'none'}}>(opcional)</span>
+                  </span>
+                </label>
+                <div className="se-media-types">
+                  {([['image','📷 Imagem'],['video','🎬 Vídeo'],['document','📄 Documento'],['audio','🎵 Áudio']] as const).map(([type, label]) => (
+                    <button
+                      key={type}
+                      type="button"
+                      className={`se-media-type-btn${mediaType === type ? ' active' : ''}`}
+                      onClick={() => { setMediaType(mediaType === type ? '' : type); if (mediaType === type) setMediaUrl(''); }}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                {mediaType && (
+                  <input
+                    type="url"
+                    className="se-media-url-input"
+                    placeholder={`URL da mídia (${mediaType === 'image' ? 'https://…/imagem.jpg' : mediaType === 'video' ? 'https://…/video.mp4' : mediaType === 'document' ? 'https://…/arquivo.pdf' : 'https://…/audio.mp3'})`}
+                    value={mediaUrl}
+                    onChange={e => setMediaUrl(e.target.value)}
+                    style={{background:'var(--bg-primary,#0f172a)',border:'1px solid var(--border,#334155)',borderRadius:8,color:'var(--text-primary,#e2e8f0)',padding:'8px 12px',fontSize:13.5,width:'100%',boxSizing:'border-box'}}
+                  />
+                )}
+              </div>
+
               <div className="se-summary-box">
                 <span>📋</span>
                 <span><strong>{uploadedLeads.length} contatos</strong> de <strong>{uploadFileName}</strong></span>

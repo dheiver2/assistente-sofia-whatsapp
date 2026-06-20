@@ -271,4 +271,11 @@ export class CampaignService implements OnModuleInit {
   async removeOptOut(id: string): Promise<void> {
     await this.optOuts.delete(id);
   }
+
+  async attachMedia(campaignId: string, mediaUrl: string, mediaType: Campaign['mediaType']): Promise<Campaign> {
+    await this.campaigns.update(campaignId, { mediaUrl, mediaType });
+    const c = await this.campaigns.findOne({ where: { id: campaignId } });
+    if (!c) throw new NotFoundException('Campanha não encontrada');
+    return c;
+  }
 }
