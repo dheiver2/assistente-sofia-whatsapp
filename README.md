@@ -26,7 +26,7 @@ O plugin [`src/plugins/extensions/auto-reply`](src/plugins/extensions/auto-reply
 - **Docker** + Docker Compose
 - **[Ollama](https://ollama.com)** rodando no host, com um modelo pequeno baixado:
   ```bash
-  ollama pull qwen2.5:3b-instruct
+  ollama pull qwen2.5:7b-instruct
   ```
 - Um número de WhatsApp para parear (de preferência dedicado ao bot).
 
@@ -54,7 +54,7 @@ Variáveis no [`docker-compose.dev.yml`](docker-compose.dev.yml) (serviço `open
 |---|---|---|
 | `ENGINE_TYPE` | `baileys` | Engine do WhatsApp (Baileys = sem navegador). |
 | `OLLAMA_URL` | `http://host.docker.internal:11434` | URL do servidor Ollama (host). |
-| `OLLAMA_MODEL` | `qwen2.5:3b-instruct` | Modelo usado. Troque por um maior (ex.: `gemma2`, `llama3.2:3b`) para português mais fluente. |
+| `OLLAMA_MODEL` | `qwen2.5:7b-instruct` | Modelo usado (ótimo português). Para menos RAM, use um menor como `qwen2.5:3b-instruct` (qualidade de texto cai um pouco). |
 | `OLLAMA_TIMEOUT_MS` | `30000` | Timeout por requisição ao modelo. |
 | `AI_SYSTEM_PROMPT` | *(persona Sofia)* | A personalidade/instruções da IA. |
 
