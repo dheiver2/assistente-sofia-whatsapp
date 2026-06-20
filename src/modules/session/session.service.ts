@@ -415,7 +415,7 @@ export class SessionService implements OnModuleDestroy, OnModuleInit, OnApplicat
     });
 
     const engine = this.engineFactory.create({
-      sessionId: session.name,
+      sessionId: session.id,
       proxyUrl: session.proxyUrl || undefined,
       proxyType: session.proxyType || undefined,
     });
