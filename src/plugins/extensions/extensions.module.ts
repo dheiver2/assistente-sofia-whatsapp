@@ -21,7 +21,7 @@ export class ExtensionsRegistrar implements OnModuleInit {
     @InjectRepository(Session, 'data') private readonly sessionRepo: Repository<Session>,
   ) {}
 
-  onModuleInit(): void {
+  async onModuleInit(): Promise<void> {
     const autoReplyManifest: PluginManifest = {
       id: 'auto-reply',
       name: 'Auto Reply (reference)',
@@ -40,7 +40,8 @@ export class ExtensionsRegistrar implements OnModuleInit {
       return { name: row?.name ?? null, ai: ai ?? null };
     };
     this.pluginLoader.registerBuiltInPlugin(autoReplyManifest, new AutoReplyPlugin(resolveSession));
-    this.logger.log('Auto-reply reference plugin registered (disabled)');
+    this.logger.log('Auto-reply plugin registered — enabling automatically');
+    await this.pluginLoader.enablePlugin('auto-reply');
 
     const translationManifest: PluginManifest = {
       id: 'translation',
