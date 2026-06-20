@@ -346,6 +346,65 @@ export interface AiConfig {
   greeting?: string;
 }
 
+// ===== Sales Engine (Motor de Vendas) =====
+export interface SalesLead {
+  name?: string;
+  phone?: string;
+  attributes: Record<string, unknown>;
+}
+export interface LeadSource {
+  id: string;
+  sessionId: string;
+  name: string;
+  type: 'postgres' | 'inline';
+  config: Record<string, unknown>;
+  createdAt: string;
+}
+export interface Campaign {
+  id: string;
+  sessionId: string;
+  name: string;
+  offerHint: string | null;
+  leadSourceId: string | null;
+  status: string;
+  ratePerMinute: number;
+  crmWebhookUrl: string | null;
+  createdAt: string;
+}
+export interface Outreach {
+  id: string;
+  campaignId: string;
+  sessionId: string;
+  leadName: string | null;
+  phone: string | null;
+  attributes: Record<string, unknown>;
+  need: string;
+  score: number;
+  message: string;
+  stage: string;
+  error: string | null;
+}
+
+export const salesApi = {
+  listSources: (sessionId: string) => request<LeadSource[]>(`/sales/sources?sessionId=${sessionId}`),
+  createSource: (body: Partial<LeadSource>) =>
+    request<LeadSource>('/sales/sources', { method: 'POST', body: JSON.stringify(body) }),
+  testSource: (id: string) => request<{ ok: boolean; message: string }>(`/sales/sources/${id}/test`, { method: 'POST' }),
+  deleteSource: (id: string) => request<void>(`/sales/sources/${id}`, { method: 'DELETE' }),
+
+  listCampaigns: (sessionId: string) => request<Campaign[]>(`/sales/campaigns?sessionId=${sessionId}`),
+  createCampaign: (body: Partial<Campaign>) =>
+    request<Campaign>('/sales/campaigns', { method: 'POST', body: JSON.stringify(body) }),
+  deleteCampaign: (id: string) => request<void>(`/sales/campaigns/${id}`, { method: 'DELETE' }),
+  generate: (id: string, leads?: SalesLead[]) =>
+    request<Outreach[]>(`/sales/campaigns/${id}/generate`, { method: 'POST', body: JSON.stringify({ leads }) }),
+  listOutreach: (id: string) => request<Outreach[]>(`/sales/campaigns/${id}/outreach`),
+  updateOutreach: (id: string, body: { message?: string; stage?: string }) =>
+    request<Outreach>(`/sales/outreach/${id}`, { method: 'PUT', body: JSON.stringify(body) }),
+  send: (id: string) => request<{ approved: number }>(`/sales/campaigns/${id}/send`, { method: 'POST' }),
+  metrics: (id: string) => request<Record<string, number>>(`/sales/campaigns/${id}/metrics`),
+};
+
 // =============================================================================
 // Webhook API
 // =============================================================================

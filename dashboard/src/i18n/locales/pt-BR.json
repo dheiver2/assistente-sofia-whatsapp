@@ -58,6 +58,7 @@
   "nav": {
     "dashboard": "Painel",
     "sessions": "Sessões",
+    "sales": "Vendas",
     "chats": "Conversas",
     "webhooks": "Webhooks",
     "templates": "Modelos",
