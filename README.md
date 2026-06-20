@@ -13,6 +13,7 @@ Construído sobre o [OpenWA](https://github.com/rmyndharis/OpenWA) (gateway de A
 - Personalidade **configurável por variável de ambiente** — sem mexer no código.
 - Persona padrão **Sofia**: acolhe o contato, entende a necessidade, apresenta as soluções da DS Consultoria (machine learning, automação, chatbots, visão computacional, NLP, análise de dados, mentorias, treinamentos) e conduz para o próximo passo, sem inventar preços ou prazos.
 - **Memória de conversa**: mantém o histórico de cada contato (persistido em disco), então acompanha o contexto, lembra do que foi dito antes — inclusive após reiniciar — e só se apresenta uma vez, sem ficar repetitiva.
+- **Múltiplas identidades**: cada sessão/número conectado pode ter a sua própria persona de IA, definida por nome de sessão em `data/personas.json` (veja abaixo). Sessões sem entrada usam a Sofia padrão.
 
 ## 🏗️ Como funciona
 
@@ -69,6 +70,30 @@ Basta editar `AI_SYSTEM_PROMPT` no compose e recriar o container (não precisa r
 ```bash
 docker compose -f docker-compose.dev.yml up -d
 ```
+
+### Identidade por sessão/número (`data/personas.json`)
+
+Cada número conectado pode ter a sua própria IA. Crie `data/personas.json` (use o
+[`personas.example.json`](personas.example.json) como base) mapeando o **nome da sessão**
+(o que você escolhe ao criar a sessão no QR) — ou o UUID dela — para o prompt daquela persona:
+
+```json
+{
+  "default": "(opcional) persona para sessões sem entrada própria",
+  "sessions": {
+    "vendas":  "Você é a Bia, consultora comercial ...",
+    "suporte": "Você é o Téo, suporte técnico ..."
+  }
+}
+```
+
+Ordem de resolução: `sessions[<uuid>]` → `sessions[<nome>]` → `default` do arquivo →
+`AI_SYSTEM_PROMPT`. O arquivo é recarregado automaticamente quando muda (não precisa reiniciar).
+A memória de conversa é separada por sessão **e** por contato.
+
+| Variável | Padrão | Descrição |
+|---|---|---|
+| `AI_PERSONAS_FILE` | `/app/data/personas.json` | Caminho do mapa de personas por sessão. |
 
 ### Trocar o modelo
 

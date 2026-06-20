@@ -1,7 +1,10 @@
 import { Injectable, Module, OnModuleInit } from '@nestjs/common';
+import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
 import { PluginLoaderService, PluginManifest, PluginType } from '../../core/plugins';
 import { AutoReplyPlugin } from './auto-reply';
 import { TranslationPlugin } from './translation';
+import { Session } from '../../modules/session/entities/session.entity';
 import { createLogger } from '../../common/services/logger.service';
 
 /**
@@ -13,7 +16,10 @@ import { createLogger } from '../../common/services/logger.service';
 export class ExtensionsRegistrar implements OnModuleInit {
   private readonly logger = createLogger('ExtensionsRegistrar');
 
-  constructor(private readonly pluginLoader: PluginLoaderService) {}
+  constructor(
+    private readonly pluginLoader: PluginLoaderService,
+    @InjectRepository(Session, 'data') private readonly sessionRepo: Repository<Session>,
+  ) {}
 
   onModuleInit(): void {
     const autoReplyManifest: PluginManifest = {
@@ -27,7 +33,12 @@ export class ExtensionsRegistrar implements OnModuleInit {
       sessions: ['*'],
     };
 
-    this.pluginLoader.registerBuiltInPlugin(autoReplyManifest, new AutoReplyPlugin());
+    // Resolver de UUID -> nome da sessão, para o auto-reply escolher a persona por sessão.
+    const resolveSessionName = async (sessionId: string): Promise<string | null> => {
+      const row = await this.sessionRepo.findOne({ where: { id: sessionId }, select: ['name'] });
+      return row?.name ?? null;
+    };
+    this.pluginLoader.registerBuiltInPlugin(autoReplyManifest, new AutoReplyPlugin(resolveSessionName));
     this.logger.log('Auto-reply reference plugin registered (disabled)');
 
     const translationManifest: PluginManifest = {
@@ -79,6 +90,7 @@ export class ExtensionsRegistrar implements OnModuleInit {
 }
 
 @Module({
+  imports: [TypeOrmModule.forFeature([Session], 'data')],
   providers: [ExtensionsRegistrar],
 })
 export class ExtensionsModule {}
