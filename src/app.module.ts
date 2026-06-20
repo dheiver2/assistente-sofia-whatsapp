@@ -8,6 +8,7 @@ import { ThrottlerModule } from '@nestjs/throttler';
 import configuration from './config/configuration';
 import { validateEnv } from './config/env.validation';
 import { SessionModule } from './modules/session/session.module';
+import { SalesEngineModule } from './modules/sales-engine/sales-engine.module';
 import { MessageModule } from './modules/message/message.module';
 import { TemplateModule } from './modules/template/template.module';
 import { WebhookModule } from './modules/webhook/webhook.module';
@@ -218,6 +219,7 @@ if (dashboardServingEnabled && dashboardBuildPresent) {
     CatalogModule, // Phase 3: Catalog API (WhatsApp Business)
     PluginsApiModule, // Phase 5: Plugins API
     ExtensionsModule, // First-party extension plugins (registered disabled)
+    SalesEngineModule, // Motor de Vendas (MVP): gera abordagens personalizadas por lead
     ...serveStaticModules, // Bundled dashboard SPA (production single-port setup)
   ],
 })
