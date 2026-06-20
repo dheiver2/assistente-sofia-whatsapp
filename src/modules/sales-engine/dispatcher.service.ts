@@ -40,7 +40,7 @@ export class DispatcherService implements OnModuleInit, OnModuleDestroy {
     if (this.running) return;
     this.running = true;
     try {
-      const active = await this.campaigns.find({ where: { status: 'sending' } });
+      const active = await this.campaigns.find({ where: { status: 'sending' as Campaign['status'] } });
       for (const campaign of active) {
         await this.processCampaign(campaign);
       }

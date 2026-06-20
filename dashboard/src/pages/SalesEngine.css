@@ -472,3 +472,28 @@
 /* ---- spinner ---- */
 .spin { animation: spin 1s linear infinite; }
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* ---- wizard ---- */
+.wizard-card { margin-bottom: 16px; }
+.wizard-steps { display: flex; align-items: center; gap: 8px; margin-bottom: 20px; flex-wrap: wrap; }
+.wstep { padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; border: 1px solid var(--border, #e2e8f0); color: var(--text-muted, #94a3b8); background: var(--bg-light, #f8fafc); }
+.wstep.active { border-color: var(--primary, #25d366); color: var(--primary, #25d366); background: var(--bg-white, #ffffff); }
+.wstep.done { border-color: var(--success, #22c55e); color: var(--success, #22c55e); }
+.wstep-arrow { color: var(--text-muted, #94a3b8); font-size: 0.9rem; }
+
+/* ---- upload zone ---- */
+.upload-zone { border: 2px dashed var(--border, #e2e8f0); border-radius: 12px; padding: 40px 24px; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+.upload-zone:hover, .upload-zone.has-file { border-color: var(--primary, #25d366); background: var(--bg-light, #f8fafc); }
+.upload-icon { margin: 0 auto 12px; display: block; color: var(--text-muted, #94a3b8); }
+.upload-icon.done { color: var(--primary, #25d366); }
+.col-map { margin-top: 16px; }
+.preview-table-wrap { overflow-x: auto; margin-top: 8px; }
+
+/* ---- progress bar ---- */
+.prog-wrap { margin-top: 6px; }
+.prog-bar { height: 6px; background: var(--border, #e2e8f0); border-radius: 4px; overflow: hidden; }
+.prog-fill { height: 100%; background: var(--primary, #25d366); border-radius: 4px; transition: width 0.4s; }
+.prog-label { font-size: 0.75rem; color: var(--text-muted, #94a3b8); margin-top: 3px; display: block; }
+
+/* ---- launching state ---- */
+.launching-state { display: flex; flex-direction: column; align-items: center; gap: 12px; padding: 32px; text-align: center; }

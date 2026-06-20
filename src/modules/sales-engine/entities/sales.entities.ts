@@ -58,7 +58,7 @@ export class Campaign {
   leadSourceId: string | null;
 
   @Column({ type: 'varchar', length: 20, default: 'draft' })
-  status: 'draft' | 'generating' | 'ready' | 'sending' | 'done';
+  status: 'draft' | 'generating' | 'ready' | 'sending' | 'paused' | 'done';
 
   // Limite de envios por minuto (anti-spam / proteção do número).
   @Column({ type: 'int', default: 6 })

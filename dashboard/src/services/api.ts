@@ -413,6 +413,18 @@ export const salesApi = {
 
   listOptOuts: (sessionId: string) => request<OptOut[]>(`/sales/opt-out?sessionId=${sessionId}`),
   removeOptOut: (id: string) => request<{ ok: boolean }>(`/sales/opt-out/${id}`, { method: 'DELETE' }),
+
+  autoRun: (id: string, leads?: SalesLead[]) =>
+    request<{ generated: number; approved: number }>(`/sales/campaigns/${id}/auto-run`, {
+      method: 'POST',
+      body: JSON.stringify({ leads }),
+    }),
+  pause: (id: string) => request<{ ok: boolean }>(`/sales/campaigns/${id}/pause`, { method: 'POST' }),
+  resume: (id: string) => request<{ ok: boolean }>(`/sales/campaigns/${id}/resume`, { method: 'POST' }),
+  progress: (id: string) =>
+    request<{ sent: number; approved: number; pending: number; failed: number; total: number; etaMinutes: number; rate: number; status: string }>(
+      `/sales/campaigns/${id}/progress`,
+    ),
 };
 
 // =============================================================================

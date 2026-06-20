@@ -96,6 +96,35 @@ export class SalesEngineController {
     return this.campaignService.approveAndSend(id);
   }
 
+  @Post('campaigns/:id/auto-run')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @ApiOperation({ summary: 'Fluxo automático: gera abordagens via IA, aprova e inicia disparo em um passo' })
+  autoRun(@Param('id') id: string, @Body() dto: GenerateCampaignDto): Promise<{ generated: number; approved: number }> {
+    return this.campaignService.autoRun(id, dto.leads);
+  }
+
+  @Post('campaigns/:id/pause')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @ApiOperation({ summary: 'Pausa o disparo da campanha' })
+  async pauseCampaign(@Param('id') id: string): Promise<{ ok: boolean }> {
+    await this.campaignService.pauseCampaign(id);
+    return { ok: true };
+  }
+
+  @Post('campaigns/:id/resume')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @ApiOperation({ summary: 'Retoma o disparo da campanha pausada' })
+  async resumeCampaign(@Param('id') id: string): Promise<{ ok: boolean }> {
+    await this.campaignService.resumeCampaign(id);
+    return { ok: true };
+  }
+
+  @Get('campaigns/:id/progress')
+  @ApiOperation({ summary: 'Progresso em tempo real da campanha (enviados, pendentes, ETA)' })
+  progress(@Param('id') id: string) {
+    return this.campaignService.progress(id);
+  }
+
   // ---- Funil / métricas (Item 4) ----
   @Get('campaigns/:id/metrics')
   @ApiOperation({ summary: 'Métricas do funil da campanha (contagem por estágio)' })

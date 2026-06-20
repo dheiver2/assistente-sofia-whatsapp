@@ -6,7 +6,7 @@ import { HookContext } from '../../core/hooks/hook.interfaces';
 import { IncomingMessage } from '../../engine/interfaces/whatsapp-engine.interface';
 import { createLogger } from '../../common/services/logger.service';
 import { Campaign, LeadSource, Outreach, OptOut, OutreachStage } from './entities/sales.entities';
-import { DataConnectorService } from './data-connector.service';
+import { ConnectorLead, DataConnectorService } from './data-connector.service';
 import { SalesEngineService } from './sales-engine.service';
 
 /** Normaliza um telefone para somente dígitos (chave de opt-out e JID). */
@@ -171,6 +171,35 @@ export class CampaignService implements OnModuleInit {
     if (!p) return;
     const exists = await this.optOuts.findOne({ where: { sessionId, phone: p } });
     if (!exists) await this.optOuts.save(this.optOuts.create({ sessionId, phone: p }));
+  }
+
+  /** Lança campanha automaticamente: gera, aprova tudo e inicia o disparo. */
+  async autoRun(campaignId: string, inlineLeads?: ConnectorLead[]): Promise<{ generated: number; approved: number }> {
+    const rows = await this.generate(campaignId, inlineLeads);
+    const { approved } = await this.approveAndSend(campaignId);
+    return { generated: rows.length, approved };
+  }
+
+  async pauseCampaign(campaignId: string): Promise<void> {
+    await this.campaigns.update(campaignId, { status: 'paused' });
+  }
+
+  async resumeCampaign(campaignId: string): Promise<void> {
+    await this.campaigns.update(campaignId, { status: 'sending' });
+  }
+
+  async progress(campaignId: string): Promise<{
+    sent: number; approved: number; pending: number; failed: number; total: number; etaMinutes: number; rate: number; status: string;
+  }> {
+    const campaign = await this.campaigns.findOne({ where: { id: campaignId } });
+    const rows = await this.outreach.find({ where: { campaignId }, select: ['stage'] });
+    const count = (stage: string) => rows.filter(r => r.stage === stage).length;
+    const sent = ['sent', 'replied', 'qualified', 'won', 'opted_out'].reduce((a, s) => a + count(s), 0);
+    const approved = count('approved');
+    const pending = count('pending');
+    const failed = count('failed');
+    const rate = campaign?.ratePerMinute ?? 6;
+    return { sent, approved, pending, failed, total: rows.length, etaMinutes: Math.ceil(approved / rate), rate, status: campaign?.status ?? 'done' };
   }
 
   async listOptOuts(sessionId: string): Promise<OptOut[]> {
