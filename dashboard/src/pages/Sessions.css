@@ -189,7 +189,7 @@
 }
 
 .info-value.error-text {
-  color: var(--color-danger, #dc2626);
+  color: var(--error);
   font-weight: 500;
   max-width: 60%;
   text-align: right;
@@ -225,12 +225,12 @@
 }
 
 .btn-action.danger {
-  color: #dc2626;
+  color: var(--error);
 }
 
 .btn-action.danger:hover {
-  background: #fee2e2;
-  border-color: #fecaca;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
 }
 
 @media (max-width: 1400px) {
@@ -424,7 +424,7 @@
 .input-error {
   margin: 0.5rem 0 0;
   font-size: 0.75rem;
-  color: #dc2626;
+  color: var(--error);
   font-weight: 500;
 }
 
@@ -456,7 +456,7 @@
 
 .btn-danger {
   padding: 0.75rem 1.25rem;
-  background: #dc2626;
+  background: var(--error);
   color: white;
   border: none;
   border-radius: var(--radius);
@@ -546,12 +546,12 @@
 
 .status-badge.connected {
   background: rgba(34, 197, 94, 0.1);
-  color: #16a34a;
+  color: var(--success);
 }
 
 .status-badge.disconnected {
   background: rgba(107, 114, 128, 0.1);
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .status-badge.connecting {
@@ -625,13 +625,13 @@
 }
 
 .btn-close:hover {
-  background: #fee2e2;
-  border-color: #fecaca;
-  color: #dc2626;
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: var(--error);
 }
 
 .btn-close:hover svg {
-  stroke: #dc2626;
+  stroke: var(--error);
 }
 
 /* QR Modal Specific */
@@ -699,7 +699,7 @@
 .status-pill.created,
 .status-pill.idle {
   background: rgba(107, 114, 128, 0.1);
-  color: #6b7280;
+  color: var(--text-muted);
 }
 
 .status-pill.initializing,
@@ -715,12 +715,12 @@
 
 .status-pill.ready {
   background: rgba(34, 197, 94, 0.1);
-  color: #16a34a;
+  color: var(--success);
 }
 
 .status-pill.disconnected {
   background: rgba(239, 68, 68, 0.1);
-  color: #dc2626;
+  color: var(--error);
 }
 
 /* Small Button for QR Placeholder */
@@ -755,7 +755,7 @@
   align-items: center;
   gap: 8px;
   padding: 24px 0;
-  color: var(--text-secondary, #888);
+  color: var(--text-secondary);
 }
 .ai-toggle {
   display: flex;
@@ -776,17 +776,17 @@
   font-size: 0.9rem;
 }
 .ai-modal .form-group small {
-  color: var(--text-secondary, #888);
+  color: var(--text-secondary);
   font-size: 0.78rem;
 }
 .ai-modal textarea,
 .ai-modal input[type='text'] {
   width: 100%;
   padding: 10px 12px;
-  border: 1px solid var(--border-color, #333);
+  border: 1px solid var(--border);
   border-radius: 8px;
-  background: var(--input-bg, var(--bg-secondary, #1a1a1a));
-  color: var(--text-primary, #eee);
+  background: var(--bg-light);
+  color: var(--text-primary);
   font-family: inherit;
   font-size: 0.9rem;
   resize: vertical;
@@ -795,7 +795,7 @@
 .ai-modal textarea:focus,
 .ai-modal input[type='text']:focus {
   outline: none;
-  border-color: var(--primary, #4f8cff);
+  border-color: var(--primary);
 }
 .spin {
   animation: spin 1s linear infinite;
@@ -820,7 +820,7 @@
 .onboarding-step.done { opacity: 0.55; }
 
 .step-icon { flex-shrink: 0; margin-top: 2px; color: var(--text-muted); }
-.step-icon.done { color: var(--success, #22c55e); }
+.step-icon.done { color: var(--success); }
 .onboarding-step.active .step-icon { color: var(--primary); }
 
 .step-body { display: flex; flex-direction: column; gap: 8px; flex: 1; }

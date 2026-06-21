@@ -144,7 +144,7 @@ function ProductModal({ initial, onSave, onClose }: ProductModalProps) {
 
           <div className="rec-form-row">
             <div className="rec-form-group">
-              <label>Keywords <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>(vírgulas)</span></label>
+              <label>Keywords <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>(vírgulas)</span></label>
               <input
                 className="rec-input"
                 value={(form.keywords ?? []).join(', ')}
@@ -153,7 +153,7 @@ function ProductModal({ initial, onSave, onClose }: ProductModalProps) {
               />
             </div>
             <div className="rec-form-group">
-              <label>Tags <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>(vírgulas)</span></label>
+              <label>Tags <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>(vírgulas)</span></label>
               <input
                 className="rec-input"
                 value={(form.tags ?? []).join(', ')}
@@ -190,7 +190,7 @@ function ProductModal({ initial, onSave, onClose }: ProductModalProps) {
             </div>
           </div>
 
-          {error && <p style={{ color: '#ef4444', fontSize: '0.875rem', margin: '0 0 12px 0' }}>{error}</p>}
+          {error && <p style={{ color: 'var(--error)', fontSize: '0.875rem', margin: '0 0 12px 0' }}>{error}</p>}
 
           <div className="rec-modal-footer">
             <button type="button" className="rec-btn rec-btn-secondary" onClick={onClose}>Cancelar</button>
@@ -471,7 +471,7 @@ function AnalyzeTab() {
                 <option value={3}>3 recomendações</option>
               </select>
             </div>
-            {analyzeError && <p style={{ color: '#ef4444', fontSize: '0.875rem', margin: '0 0 10px 0' }}>{analyzeError}</p>}
+            {analyzeError && <p style={{ color: 'var(--error)', fontSize: '0.875rem', margin: '0 0 10px 0' }}>{analyzeError}</p>}
             <button className="rec-btn rec-btn-primary" onClick={() => void runAnalyze()} disabled={analyzing}>
               {analyzing ? 'Analisando...' : '✨ Analisar com IA'}
             </button>
@@ -542,7 +542,7 @@ function AnalyzeTab() {
           </div>
 
           <div className="rec-form-group">
-            <label>Arquivo CSV <span style={{ fontSize: '0.78rem', color: '#6b7280' }}>(coluna: phone)</span></label>
+            <label>Arquivo CSV <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>(coluna: phone)</span></label>
             <div
               className={`rec-upload-area ${csvFilename ? '' : ''}`}
               onClick={() => fileInputRef.current?.click()}
@@ -569,7 +569,7 @@ function AnalyzeTab() {
             />
           </div>
 
-          {batchError && <p style={{ color: '#ef4444', fontSize: '0.875rem', margin: '0 0 10px 0' }}>{batchError}</p>}
+          {batchError && <p style={{ color: 'var(--error)', fontSize: '0.875rem', margin: '0 0 10px 0' }}>{batchError}</p>}
 
           {batchProgress && <p className="rec-progress-info">{batchProgress}</p>}
 

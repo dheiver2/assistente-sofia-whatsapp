@@ -14,7 +14,7 @@
 }
 
 .rec-page .rec-subtitle {
-  color: var(--text-secondary, #6b7280);
+  color: var(--text-secondary);
   margin: 0 0 24px 0;
   font-size: 0.95rem;
 }
@@ -96,7 +96,7 @@
 }
 
 .rec-btn-secondary {
-  background: var(--bg-secondary, #f3f4f6);
+  background: var(--bg-white);
   color: var(--text-primary);
   border: 1px solid var(--border, #e5e7eb);
 }
@@ -127,7 +127,7 @@
 }
 
 .rec-product-card {
-  background: var(--bg-secondary, #f9fafb);
+  background: var(--bg-white);
   border: 1px solid var(--border, #e5e7eb);
   border-radius: 12px;
   padding: 16px;
@@ -240,8 +240,8 @@
 }
 
 .rec-badge-inactive {
-  background: #f3f4f6;
-  color: #6b7280;
+  background: var(--bg-light);
+  color: var(--text-muted);
 }
 
 /* Table */
@@ -258,7 +258,7 @@
 }
 
 .rec-table th {
-  background: var(--bg-secondary, #f9fafb);
+  background: var(--bg-white);
   color: var(--text-secondary, #6b7280);
   font-weight: 600;
   text-align: left;
@@ -279,7 +279,7 @@
 }
 
 .rec-table tr:hover td {
-  background: var(--bg-secondary, #f9fafb);
+  background: var(--bg-white);
 }
 
 /* Score bar */
@@ -305,15 +305,15 @@
 }
 
 .rec-score-bar-fill.high {
-  background: #10b981;
+  background: var(--success);
 }
 
 .rec-score-bar-fill.mid {
-  background: #f59e0b;
+  background: var(--warning);
 }
 
 .rec-score-bar-fill.low {
-  background: #ef4444;
+  background: var(--error);
 }
 
 .rec-score-label {
@@ -350,7 +350,7 @@
 }
 
 .rec-media-badge.none {
-  background: var(--bg-secondary, #f3f4f6);
+  background: var(--bg-white);
   color: var(--text-secondary, #6b7280);
 }
 
@@ -360,7 +360,7 @@
   flex-direction: column;
   gap: 12px;
   padding: 20px;
-  background: var(--bg-secondary, #f9fafb);
+  background: var(--bg-white);
   border: 1px solid var(--border, #e5e7eb);
   border-radius: 12px;
   margin: 16px 0;
@@ -402,9 +402,9 @@
 
 /* Result / insight card */
 .rec-insight-card {
-  background: var(--bg-secondary, #f0f9ff);
-  border: 1px solid var(--border, #bae6fd);
-  border-left: 4px solid var(--primary, #6366f1);
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
   border-radius: 10px;
   padding: 16px 20px;
   margin-bottom: 20px;
@@ -426,7 +426,7 @@
 
 /* Result card */
 .rec-result-card {
-  background: var(--bg-primary, #fff);
+  background: var(--bg-card);
   border: 1px solid var(--border, #e5e7eb);
   border-radius: 12px;
   padding: 16px 20px;
@@ -453,7 +453,7 @@
   font-size: 0.875rem;
   color: var(--text-secondary, #6b7280);
   line-height: 1.5;
-  background: var(--bg-secondary, #f9fafb);
+  background: var(--bg-white);
   border-radius: 8px;
   padding: 10px 14px;
   font-style: italic;
@@ -474,7 +474,7 @@
 }
 
 .rec-form-group label .rec-required {
-  color: #ef4444;
+  color: var(--error);
   margin-left: 2px;
 }
 
@@ -485,7 +485,7 @@
   padding: 8px 12px;
   border: 1px solid var(--border, #d1d5db);
   border-radius: 8px;
-  background: var(--bg-primary, #fff);
+  background: var(--bg-card);
   color: var(--text-primary);
   font-size: 0.875rem;
   outline: none;
@@ -559,7 +559,7 @@
 .rec-mode-toggle {
   display: flex;
   gap: 4px;
-  background: var(--bg-secondary, #f3f4f6);
+  background: var(--bg-white);
   border-radius: 8px;
   padding: 3px;
   margin-bottom: 20px;
@@ -579,14 +579,14 @@
 }
 
 .rec-mode-btn.active {
-  background: var(--bg-primary, #fff);
+  background: var(--bg-card);
   color: var(--text-primary);
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
 }
 
 /* Analyze form container */
 .rec-analyze-form {
-  background: var(--bg-secondary, #f9fafb);
+  background: var(--bg-white);
   border: 1px solid var(--border, #e5e7eb);
   border-radius: 12px;
   padding: 20px;
@@ -651,7 +651,7 @@
 }
 
 .rec-modal {
-  background: var(--bg-primary, #fff);
+  background: var(--bg-card);
   border-radius: 16px;
   padding: 24px;
   width: 100%;
@@ -690,7 +690,7 @@
 }
 
 .rec-modal-close:hover {
-  background: var(--bg-secondary, #f3f4f6);
+  background: var(--bg-white);
 }
 
 .rec-modal-footer {
@@ -741,7 +741,7 @@
   text-align: center;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
-  background: var(--bg-secondary, #f9fafb);
+  background: var(--bg-white);
 }
 
 .rec-upload-area:hover,

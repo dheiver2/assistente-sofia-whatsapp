@@ -374,7 +374,7 @@
 
 .message-bubble.outgoing {
   background: #d9fdd3; /* Soft WhatsApp Green */
-  color: #111b21;
+  color: #111b21; /* readable dark text on the light green bubble; dark theme overridden below */
   border-bottom-right-radius: 2px;
 }
 
@@ -507,7 +507,7 @@
 }
 
 .text-warn {
-  color: #ea580c;
+  color: var(--warning);
 }
 
 /* Real-time connection-lost banner */
@@ -518,8 +518,8 @@
   padding: 0.5rem 0.75rem;
   margin-bottom: 0.75rem;
   border-radius: 6px;
-  background: rgba(234, 88, 12, 0.1);
-  color: #ea580c;
+  background: rgba(245, 158, 11, 0.12);
+  color: var(--warning);
   font-size: 0.875rem;
 }
 
@@ -619,8 +619,8 @@
 }
 
 .btn-remove-attachment:hover {
-  background: #fee2e2;
-  color: #dc2626;
+  background: rgba(239, 68, 68, 0.12);
+  color: var(--error);
 }
 
 .chats-emoji-picker {
@@ -803,8 +803,8 @@
 }
 
 .chats-page .action-btn.delete-btn:hover {
-  color: #dc2626;
-  background: #fee2e2;
+  color: var(--error);
+  background: rgba(239, 68, 68, 0.12);
 }
 
 /* Reaction Quick Popover */
@@ -1002,8 +1002,8 @@
   padding: 0.3rem 0.6rem;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: var(--bg-subtle, #f4f6f8);
-  color: var(--text-secondary, #666);
+  background: var(--bg-light);
+  color: var(--text-secondary);
   font-size: 0.72rem;
   font-weight: 500;
   cursor: pointer;
@@ -1012,13 +1012,13 @@
 }
 
 .status-filter-pill:hover {
-  background: var(--bg-hover, #e8edf0);
+  background: var(--border);
 }
 
 .status-filter-pill.active {
-  border-color: var(--primary, #25d366);
-  background: var(--primary-light, #e6faf0);
-  color: var(--primary-dark, #128c4e);
+  border-color: var(--primary);
+  background: rgba(37, 211, 102, 0.12);
+  color: var(--primary-hover);
   font-weight: 600;
 }
 
@@ -1036,8 +1036,8 @@
   padding: 0.3rem 0.65rem;
   border-radius: 999px;
   border: 1px solid var(--border);
-  background: var(--bg-subtle, #f4f6f8);
-  color: var(--text-secondary, #666);
+  background: var(--bg-light);
+  color: var(--text-secondary);
   font-size: 0.72rem;
   font-weight: 500;
   cursor: pointer;
@@ -1048,7 +1048,7 @@
 
 .room-status-btn:hover {
   opacity: 1;
-  background: var(--bg-hover, #e8edf0);
+  background: var(--border);
 }
 
 .room-status-btn.active {
@@ -1057,13 +1057,13 @@
 }
 
 .room-status-btn.status-open.active {
-  border-color: #25d366;
+  border-color: var(--primary);
   background: #e6faf0;
   color: #128c4e;
 }
 
 .room-status-btn.status-pending.active {
-  border-color: #f59e0b;
+  border-color: var(--warning);
   background: #fef3c7;
   color: #92400e;
 }
@@ -1101,14 +1101,14 @@
   border-bottom: 1px solid var(--border);
   font-size: 0.85rem;
   font-weight: 600;
-  color: var(--text-primary, #111);
+  color: var(--text-primary);
 }
 
 .btn-close-quick-replies {
   background: none;
   border: none;
   cursor: pointer;
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary);
   padding: 0.2rem;
   border-radius: 4px;
   display: flex;
@@ -1116,7 +1116,7 @@
 }
 
 .btn-close-quick-replies:hover {
-  background: var(--bg-hover, #e8edf0);
+  background: var(--bg-light);
 }
 
 .quick-replies-list {
@@ -1128,7 +1128,7 @@
 .quick-replies-empty {
   padding: 1.25rem;
   text-align: center;
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary);
   font-size: 0.85rem;
   display: flex;
   justify-content: center;
@@ -1154,18 +1154,18 @@
 }
 
 .quick-reply-item:hover {
-  background: var(--bg-hover, #e8edf0);
+  background: var(--bg-light);
 }
 
 .quick-reply-name {
   font-size: 0.8rem;
   font-weight: 600;
-  color: var(--primary-dark, #128c4e);
+  color: var(--primary-hover);
 }
 
 .quick-reply-body {
   font-size: 0.78rem;
-  color: var(--text-secondary, #666);
+  color: var(--text-secondary);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

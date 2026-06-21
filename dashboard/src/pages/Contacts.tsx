@@ -360,7 +360,7 @@ export function Contacts() {
                     <td><StatusBadge status={contact.status} /></td>
 
                     {/* Último contato */}
-                    <td style={{ color: 'var(--text-muted, #94a3b8)', fontSize: 13 }}>
+                    <td style={{ color: 'var(--text-muted)', fontSize: 13 }}>
                       {fmtDate(contact.lastContactAt)}
                     </td>
 
@@ -446,7 +446,7 @@ export function Contacts() {
             {/* Tags atuais do contato */}
             {selectedContact.tags.length > 0 && (
               <div>
-                <p style={{ margin: '0 0 6px', fontSize: 12, color: 'var(--text-muted, #94a3b8)' }}>
+                <p style={{ margin: '0 0 6px', fontSize: 12, color: 'var(--text-muted)' }}>
                   Tags atuais:
                 </p>
                 <div className="ct-tags">

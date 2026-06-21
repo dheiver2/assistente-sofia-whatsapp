@@ -346,7 +346,7 @@ export function SalesEngine() {
                         {c.scheduledAt && c.status === 'draft' ? (
                           <div className="se-prog">
                             <span className="se-prog-txt" style={{display:'flex',alignItems:'center',gap:4}}>
-                              <Clock size={12} style={{color:'#f59e0b'}} />
+                              <Clock size={12} style={{color:'var(--warning)'}} />
                               Agendado para {new Date(c.scheduledAt).toLocaleDateString('pt-BR')} às {new Date(c.scheduledAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
                             </span>
                           </div>
@@ -518,7 +518,7 @@ export function SalesEngine() {
               {/* Mídia opcional */}
               <div className="se-media-section">
                 <label className="se-field" style={{marginBottom:0}}>
-                  <span style={{fontSize:12,fontWeight:600,color:'var(--text-muted,#94a3b8)',textTransform:'uppercase',letterSpacing:'0.04em'}}>
+                  <span style={{fontSize:12,fontWeight:600,color:'var(--text-muted)',textTransform:'uppercase',letterSpacing:'0.04em'}}>
                     Mídia da campanha <span style={{fontWeight:400,textTransform:'none'}}>(opcional)</span>
                   </span>
                 </label>
@@ -541,7 +541,7 @@ export function SalesEngine() {
                     placeholder={`URL da mídia (${mediaType === 'image' ? 'https://…/imagem.jpg' : mediaType === 'video' ? 'https://…/video.mp4' : mediaType === 'document' ? 'https://…/arquivo.pdf' : 'https://…/audio.mp3'})`}
                     value={mediaUrl}
                     onChange={e => setMediaUrl(e.target.value)}
-                    style={{background:'var(--bg-primary,#0f172a)',border:'1px solid var(--border,#334155)',borderRadius:8,color:'var(--text-primary,#e2e8f0)',padding:'8px 12px',fontSize:13.5,width:'100%',boxSizing:'border-box'}}
+                    style={{background:'var(--bg-light)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text-primary)',padding:'8px 12px',fontSize:13.5,width:'100%',boxSizing:'border-box'}}
                   />
                 )}
               </div>
@@ -553,7 +553,7 @@ export function SalesEngine() {
                   type="datetime-local"
                   value={scheduledAt}
                   onChange={e => setScheduledAt(e.target.value)}
-                  style={{background:'var(--bg-primary,#0f172a)',border:'1px solid var(--border,#334155)',borderRadius:8,color:'var(--text-primary,#e2e8f0)',padding:'8px 12px',fontSize:13.5,width:'100%',boxSizing:'border-box'}}
+                  style={{background:'var(--bg-light)',border:'1px solid var(--border)',borderRadius:8,color:'var(--text-primary)',padding:'8px 12px',fontSize:13.5,width:'100%',boxSizing:'border-box'}}
                 />
                 {scheduledAt && (
                   <p className="se-muted" style={{marginTop:6,fontSize:13}}>
@@ -581,7 +581,7 @@ export function SalesEngine() {
           {/* STEP 2 — Lançando */}
           {wStep === 2 && (
             <div className="se-step-card se-launching">
-              <Loader2 size={48} className="spin" style={{color:'var(--primary,#25d366)'}} />
+              <Loader2 size={48} className="spin" style={{color:'var(--primary)'}} />
               <h2>Lançando campanha…</h2>
               <p className="se-muted">A IA está gerando mensagens personalizadas para {uploadedLeads.length} contatos.<br/>O disparo começa automaticamente em seguida.</p>
             </div>
