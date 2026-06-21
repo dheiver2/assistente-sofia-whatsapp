@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, Entity, Index, PrimaryGeneratedColumn } from 'typeorm';
 
-export type RecommendationStatus = 'pending' | 'sent' | 'viewed' | 'clicked' | 'converted' | 'rejected';
+export type RecommendationStatus = 'pending' | 'sent' | 'failed' | 'viewed' | 'clicked' | 'converted' | 'rejected';
 
 @Entity('recommendations')
 export class Recommendation {

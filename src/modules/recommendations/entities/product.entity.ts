@@ -7,8 +7,8 @@ export class Product {
   id: string;
 
   @Index()
-  @Column({ type: 'varchar', length: 64 })
-  sessionId: string;
+  @Column({ type: 'varchar', length: 64, nullable: true })
+  sessionId: string | null;
 
   @Column({ type: 'varchar', length: 120 })
   name: string;

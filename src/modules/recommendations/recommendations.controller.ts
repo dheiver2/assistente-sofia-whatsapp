@@ -1,8 +1,9 @@
-import { Body, Controller, Delete, Get, Param, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Post, Put, Query, UseGuards } from '@nestjs/common';
 import { ApiTags } from '@nestjs/swagger';
 import { ApiKeyGuard } from '../auth/guards/api-key.guard';
 import { RecommendationOrchestrator } from './recommendation-orchestrator.service';
 import { ProductsService } from './products.service';
+import { RecommendationDeliveryService } from './recommendation-delivery.service';
 
 @ApiTags('recommendations')
 @UseGuards(ApiKeyGuard)
@@ -11,34 +12,49 @@ export class RecommendationsController {
   constructor(
     private readonly orchestrator: RecommendationOrchestrator,
     private readonly productsService: ProductsService,
+    private readonly deliveryService: RecommendationDeliveryService,
   ) {}
 
-  // ── Products catalog ─────────────────────────────────────────────────────
-  @Get('products')
-  listProducts(@Query('sessionId') sessionId: string) { return this.productsService.list(sessionId); }
+  // ── Catalog (global) ─────────────────────────────────────────────────────
+  @Get('catalog')
+  listCatalog() { return this.productsService.list(); }
 
-  @Post('products')
+  @Post('catalog')
   createProduct(@Body() body: Record<string, unknown>) { return this.productsService.create(body as Parameters<ProductsService['create']>[0]); }
 
-  @Post('products/:id')
+  @Put('catalog/:id')
   updateProduct(@Param('id') id: string, @Body() body: Record<string, unknown>) { return this.productsService.update(id, body as Parameters<ProductsService['update']>[1]); }
 
-  @Delete('products/:id')
+  @Delete('catalog/:id')
   deleteProduct(@Param('id') id: string) { return this.productsService.delete(id); }
 
-  // ── Orchestration ────────────────────────────────────────────────────────
+  // ── Analysis ─────────────────────────────────────────────────────────────
   @Post('analyze')
-  analyze(@Body() body: { sessionId: string; phone: string; topN?: number; externalData?: Record<string, unknown> }) {
-    return this.orchestrator.orchestrate(body);
-  }
+  analyze(@Body() body: { sessionId: string; phone: string; topN?: number }) { return this.orchestrator.analyze(body); }
 
   @Post('batch')
-  batch(@Body() body: { sessionId: string; phones: string[]; campaignId?: string }) {
-    return this.orchestrator.orchestrateBatch(body.phones, body.sessionId, body.campaignId);
+  async batch(@Body() body: { sessionId: string; phones: string[]; topN?: number }) {
+    const generated = await this.orchestrator.batch(body.sessionId, body.phones, body.topN);
+    return { generated };
   }
 
+  // ── Pending / delivery ───────────────────────────────────────────────────
   @Get('pending')
-  pending(@Query('sessionId') sessionId: string) { return this.orchestrator.getPendingRecommendations(sessionId); }
+  pending(@Query('sessionId') sessionId: string) { return this.orchestrator.listPending(sessionId); }
+
+  @Post('deliver-all')
+  deliverAll(@Body() body: { sessionId: string }) { return this.deliveryService.deliverAllPending(body.sessionId); }
+
+  @Post('deliver-batch')
+  deliverBatch(@Body() body: { sessionId: string; phone?: string }) {
+    return body.phone
+      ? this.deliveryService.deliverPendingForPhone(body.sessionId, body.phone)
+      : this.deliveryService.deliverAllPending(body.sessionId);
+  }
+
+  // Dynamic routes — must come AFTER the static ones above.
+  @Post(':id/deliver')
+  deliver(@Param('id') id: string) { return this.deliveryService.deliverOne(id); }
 
   @Delete(':id')
   delete(@Param('id') id: string) { return this.orchestrator.deleteRecommendation(id); }

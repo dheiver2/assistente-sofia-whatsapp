@@ -8,13 +8,15 @@ import { AnalysisAgent } from './agents/analysis.agent';
 import { MatchingAgent } from './agents/matching.agent';
 import { MessageCrafterAgent } from './agents/message-crafter.agent';
 import { RecommendationOrchestrator } from './recommendation-orchestrator.service';
+import { RecommendationDeliveryService } from './recommendation-delivery.service';
 import { RecommendationsController } from './recommendations.controller';
 import { Contact } from '../contacts/entities/contact.entity';
 import { Session } from '../session/entities/session.entity';
+import { MessageModule } from '../message/message.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Product, Recommendation, Contact, Session], 'data')],
-  providers: [ProductsService, ProfileAgent, AnalysisAgent, MatchingAgent, MessageCrafterAgent, RecommendationOrchestrator],
+  imports: [TypeOrmModule.forFeature([Product, Recommendation, Contact, Session], 'data'), MessageModule],
+  providers: [ProductsService, ProfileAgent, AnalysisAgent, MatchingAgent, MessageCrafterAgent, RecommendationOrchestrator, RecommendationDeliveryService],
   controllers: [RecommendationsController],
   exports: [RecommendationOrchestrator, ProductsService],
 })

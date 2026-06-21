@@ -35,6 +35,8 @@ export interface OrchestrateResult {
 @Injectable()
 export class RecommendationOrchestrator {
   private readonly logger = new Logger(RecommendationOrchestrator.name);
+  private lastInterests: string[] = [];
+  private lastIntent = '';
 
   constructor(
     @InjectRepository(Product, 'data') private readonly products: Repository<Product>,
@@ -61,7 +63,7 @@ export class RecommendationOrchestrator {
     this.logger.log(`[Orchestrator] Stage 1 — fetching profile + catalog for ${phone}`);
     const [profile, catalog, session] = await Promise.all([
       this.profileAgent.fetch(sessionId, phone, externalData),
-      this.products.find({ where: { sessionId, active: true } }),
+      this.products.find({ where: { active: true } }),
       this.sessions.findOne({ where: { id: sessionId }, select: ['id', 'config'] }),
     ]);
 
@@ -75,6 +77,8 @@ export class RecommendationOrchestrator {
     // ── Stage 2: Customer analysis ─────────────────────────────────────────
     this.logger.log(`[Orchestrator] Stage 2 — analyzing customer profile`);
     const analysis = await this.analysisAgent.analyze(profile, ai.knowledge);
+    this.lastInterests = analysis.interests ?? [];
+    this.lastIntent = analysis.likelyNeeds ?? '';
 
     // ── Stage 3: Product matching ──────────────────────────────────────────
     this.logger.log(`[Orchestrator] Stage 3 — matching products`);
@@ -156,5 +160,58 @@ export class RecommendationOrchestrator {
 
   async deleteRecommendation(id: string): Promise<void> {
     await this.recs.delete(id);
+  }
+
+  private mapRec(r: Recommendation) {
+    return {
+      id: r.id,
+      sessionId: r.sessionId,
+      phone: r.phone,
+      productId: r.productId,
+      productName: r.productName,
+      score: Math.round(r.relevanceScore ?? 0) / 100, // 0..1
+      message: r.message,
+      mediaType: r.mediaType,
+      status: r.status,
+      createdAt: r.createdAt,
+    };
+  }
+
+  async analyze(params: { sessionId: string; phone: string; topN?: number }): Promise<{
+    customerInsight: { summary: string; interests?: string[]; intent?: string };
+    recommendations: ReturnType<RecommendationOrchestrator['mapRec']>[];
+  }> {
+    const result = await this.orchestrate({ sessionId: params.sessionId, phone: params.phone, topN: params.topN });
+    const saved = await this.recs.find({
+      where: { sessionId: params.sessionId, phone: params.phone, status: 'pending' },
+      order: { createdAt: 'DESC' },
+      take: params.topN ?? 3,
+    });
+    return {
+      customerInsight: {
+        summary: result.customerInsight,
+        interests: this.lastInterests,
+        intent: this.lastIntent,
+      },
+      recommendations: saved.map(r => this.mapRec(r)),
+    };
+  }
+
+  async batch(sessionId: string, phones: string[], topN?: number): Promise<number> {
+    let total = 0;
+    for (const phone of phones) {
+      try {
+        const r = await this.analyze({ sessionId, phone, topN });
+        total += r.recommendations.length;
+      } catch (e) {
+        this.logger.error(`batch ${phone}`, e as Error);
+      }
+    }
+    return total;
+  }
+
+  async listPending(sessionId: string): Promise<ReturnType<RecommendationOrchestrator['mapRec']>[]> {
+    const pending = await this.recs.find({ where: { sessionId, status: 'pending' }, order: { createdAt: 'DESC' } });
+    return pending.map(r => this.mapRec(r));
   }
 }
