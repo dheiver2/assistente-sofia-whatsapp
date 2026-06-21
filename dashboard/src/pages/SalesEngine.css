@@ -566,3 +566,39 @@
   .se-tab    { padding: 8px 10px; font-size: 12.5px; }
   .se-fstat  { min-width: 56px; padding: 6px 8px; }
 }
+
+/* ── Report modal ── */
+.se-report-modal {
+  max-width: 480px;
+  width: 100%;
+}
+.se-report-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  padding: 8px 0;
+}
+.se-report-stat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  background: var(--bg-secondary, #1e293b);
+  border: 1px solid var(--border, #334155);
+  border-radius: 10px;
+  padding: 18px 12px;
+  gap: 6px;
+  text-align: center;
+}
+.se-report-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--primary, #25d366);
+  line-height: 1;
+}
+.se-report-label {
+  font-size: 12px;
+  color: var(--text-muted, #94a3b8);
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

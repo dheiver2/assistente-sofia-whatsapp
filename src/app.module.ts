@@ -34,6 +34,7 @@ import { HooksModule } from './core/hooks';
 import { PluginsModule } from './core/plugins';
 import { PluginsApiModule } from './modules/plugins/plugins.module';
 import { ExtensionsModule } from './plugins/extensions/extensions.module';
+import { ContactsModule } from './modules/contacts/contacts.module';
 
 // Only import QueueModule if explicitly enabled to avoid Redis connection errors
 const queueModules: Array<Type | DynamicModule> = [];
@@ -117,6 +118,7 @@ if (dashboardServingEnabled && dashboardBuildPresent) {
             __dirname + '/modules/message/**/*.entity{.ts,.js}',
             __dirname + '/modules/template/**/*.entity{.ts,.js}',
             __dirname + '/modules/sales-engine/**/*.entities{.ts,.js}',
+            __dirname + '/modules/contacts/**/*.entity{.ts,.js}',
             __dirname + '/engine/**/*.entity{.ts,.js}',
           ],
           migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
@@ -220,6 +222,7 @@ if (dashboardServingEnabled && dashboardBuildPresent) {
     CatalogModule, // Phase 3: Catalog API (WhatsApp Business)
     PluginsApiModule, // Phase 5: Plugins API
     ExtensionsModule, // First-party extension plugins (registered disabled)
+    ContactsModule, // Unified contact database with tags and notes
     SalesEngineModule, // Motor de Vendas (MVP): gera abordagens personalizadas por lead
     ...serveStaticModules, // Bundled dashboard SPA (production single-port setup)
   ],

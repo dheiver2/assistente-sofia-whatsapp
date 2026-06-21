@@ -332,6 +332,11 @@ export const sessionApi = {
     request<{ messages: ChatMessage[]; total: number }>(
       `/sessions/${id}/messages?chatId=${encodeURIComponent(chatId)}&limit=${limit}`,
     ),
+  setChatStatus: (sessionId: string, chatId: string, status: 'open' | 'pending' | 'resolved') =>
+    request<{ success: boolean }>(`/sessions/${sessionId}/chats/${encodeURIComponent(chatId)}/status`, {
+      method: 'PUT',
+      body: JSON.stringify({ status }),
+    }).catch(() => null),
   getAi: (id: string) => request<AiConfig>(`/sessions/${id}/ai`),
   updateAi: (id: string, config: AiConfig) =>
     request<AiConfig>(`/sessions/${id}/ai`, { method: 'PUT', body: JSON.stringify(config) }),
@@ -371,6 +376,7 @@ export interface Campaign {
   crmWebhookUrl: string | null;
   mediaUrl: string | null;
   mediaType: 'image' | 'video' | 'document' | 'audio' | null;
+  scheduledAt?: string;
   createdAt: string;
 }
 export interface Outreach {
@@ -429,6 +435,7 @@ export const salesApi = {
     request<{ sent: number; approved: number; pending: number; failed: number; total: number; etaMinutes: number; rate: number; status: string }>(
       `/sales/campaigns/${id}/progress`,
     ),
+  report: (id: string) => request<Record<string, unknown>>(`/sales/campaigns/${id}/report`),
 };
 
 // =============================================================================
@@ -721,4 +728,42 @@ export const pluginsApi = {
   healthCheck: (id: string) => request<{ healthy: boolean; message?: string }>(`/plugins/${id}/health`),
   getEngines: () => request<Engine[]>('/infra/engines'),
   getCurrentEngine: () => request<{ engineType: string }>('/infra/engines/current'),
+};
+
+// =============================================================================
+// Contacts API
+// =============================================================================
+
+export interface Contact {
+  id: string;
+  sessionId: string;
+  phone: string;
+  name: string | null;
+  email: string | null;
+  tags: string[];
+  notes: string | null;
+  status: 'active' | 'blocked' | 'opted_out';
+  lastContactAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const contactsApi = {
+  list: (sessionId: string, tag?: string, search?: string) =>
+    request<Contact[]>(`/contacts?${new URLSearchParams({
+      sessionId,
+      ...(tag ? { tag } : {}),
+      ...(search ? { search } : {}),
+    }).toString()}`),
+  upsert: (data: { sessionId: string; phone: string; name?: string; tags?: string[]; notes?: string }) =>
+    request<Contact>('/contacts', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    }),
+  addTag: (id: string, tag: string) =>
+    request<Contact>(`/contacts/${id}/tags/${encodeURIComponent(tag)}`, { method: 'PUT' }),
+  removeTag: (id: string, tag: string) =>
+    request<Contact>(`/contacts/${id}/tags/${encodeURIComponent(tag)}`, { method: 'DELETE' }),
+  delete: (id: string) =>
+    request<void>(`/contacts/${id}`, { method: 'DELETE' }),
 };

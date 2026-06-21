@@ -45,15 +45,42 @@ export interface SessionAi {
   knowledge?: string;
   model?: string;
   greeting?: string;
+  businessHours?: {
+    enabled: boolean;
+    timezone?: string; // e.g. 'America/Sao_Paulo'
+    schedule: {
+      [day: string]: { start: string; end: string } | false; // day = 'mon','tue','wed','thu','fri','sat','sun'; false = closed
+    };
+    outsideMessage?: string; // message sent when outside hours
+  };
 }
 /** Resolve a sessão (nome + config de IA) a partir do seu id (UUID). Injetado pelo registrar. */
 export type SessionResolver = (sessionId: string) => Promise<{ name: string | null; ai: SessionAi | null }>;
+
+function isWithinBusinessHours(bh: NonNullable<SessionAi['businessHours']>): boolean {
+  if (!bh.enabled) return true;
+  const tz = bh.timezone ?? 'America/Sao_Paulo';
+  const now = new Date();
+  const formatter = new Intl.DateTimeFormat('en-US', { timeZone: tz, weekday: 'short', hour: '2-digit', minute: '2-digit', hour12: false });
+  const parts = formatter.formatToParts(now);
+  const dayMap: Record<string, string> = { Mon: 'mon', Tue: 'tue', Wed: 'wed', Thu: 'thu', Fri: 'fri', Sat: 'sat', Sun: 'sun' };
+  const dayKey = dayMap[parts.find(p => p.type === 'weekday')?.value ?? ''] ?? '';
+  const hourStr = parts.find(p => p.type === 'hour')?.value ?? '00';
+  const minStr = parts.find(p => p.type === 'minute')?.value ?? '00';
+  const currentMinutes = parseInt(hourStr) * 60 + parseInt(minStr);
+  const rule = bh.schedule[dayKey];
+  if (!rule) return false; // closed today
+  const [sh, sm] = rule.start.split(':').map(Number);
+  const [eh, em] = rule.end.split(':').map(Number);
+  return currentMinutes >= sh * 60 + sm && currentMinutes < eh * 60 + em;
+}
 
 interface ResolvedProfile {
   systemPrompt: string;
   model: string;
   greeting?: string;
   enabled: boolean;
+  ai: SessionAi | null;
 }
 
 interface PendingBurst {
@@ -121,6 +148,7 @@ export class AutoReplyPlugin implements IPlugin {
       model: ai?.model?.trim() || OLLAMA_MODEL,
       greeting: ai?.greeting?.trim() || undefined,
       enabled: ai?.enabled !== false, // default: ligado
+      ai,
     };
   }
 
@@ -215,6 +243,13 @@ export class AutoReplyPlugin implements IPlugin {
     try {
       const profile = await this.resolveProfile(sessionId);
       if (!profile.enabled) return; // IA desligada para esta empresa/sessão
+
+      // Business hours check
+      if (profile.ai?.businessHours?.enabled && !isWithinBusinessHours(profile.ai.businessHours)) {
+        const outsideMsg = profile.ai.businessHours.outsideMessage ?? 'Nosso atendimento está fora do horário. Retornaremos em breve!';
+        await context.messages.reply(sessionId, chatId, burst.lastMessageId, outsideMsg);
+        return;
+      }
 
       const history = await this.loadHistory(context, key);
       const firstContact = history.length === 0;

@@ -984,3 +984,245 @@
   background: #202c33;
   border-color: #2f3b43;
 }
+
+/* =============================================================================
+   STATUS FILTER PILLS (sidebar)
+   ============================================================================= */
+.chat-status-filter-bar {
+  display: flex;
+  gap: 0.375rem;
+  padding: 0.625rem 1rem 0.75rem;
+  flex-wrap: wrap;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-white);
+}
+
+.status-filter-pill {
+  flex: 1 1 auto;
+  padding: 0.3rem 0.6rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle, #f4f6f8);
+  color: var(--text-secondary, #666);
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.status-filter-pill:hover {
+  background: var(--bg-hover, #e8edf0);
+}
+
+.status-filter-pill.active {
+  border-color: var(--primary, #25d366);
+  background: var(--primary-light, #e6faf0);
+  color: var(--primary-dark, #128c4e);
+  font-weight: 600;
+}
+
+/* =============================================================================
+   ROOM STATUS BUTTONS (chat header)
+   ============================================================================= */
+.room-status-actions {
+  display: flex;
+  gap: 0.375rem;
+  margin-left: auto;
+  flex-shrink: 0;
+}
+
+.room-status-btn {
+  padding: 0.3rem 0.65rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--bg-subtle, #f4f6f8);
+  color: var(--text-secondary, #666);
+  font-size: 0.72rem;
+  font-weight: 500;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, opacity 0.15s;
+  opacity: 0.65;
+}
+
+.room-status-btn:hover {
+  opacity: 1;
+  background: var(--bg-hover, #e8edf0);
+}
+
+.room-status-btn.active {
+  opacity: 1;
+  font-weight: 600;
+}
+
+.room-status-btn.status-open.active {
+  border-color: #25d366;
+  background: #e6faf0;
+  color: #128c4e;
+}
+
+.room-status-btn.status-pending.active {
+  border-color: #f59e0b;
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.room-status-btn.status-resolved.active {
+  border-color: #6366f1;
+  background: #ede9fe;
+  color: #3730a3;
+}
+
+/* =============================================================================
+   QUICK REPLIES POPOVER
+   ============================================================================= */
+.quick-replies-popover {
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  right: 1rem;
+  width: 320px;
+  max-height: 320px;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 50;
+  overflow: hidden;
+}
+
+.quick-replies-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-primary, #111);
+}
+
+.btn-close-quick-replies {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--text-secondary, #666);
+  padding: 0.2rem;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+}
+
+.btn-close-quick-replies:hover {
+  background: var(--bg-hover, #e8edf0);
+}
+
+.quick-replies-list {
+  overflow-y: auto;
+  flex: 1;
+}
+
+.quick-replies-loading,
+.quick-replies-empty {
+  padding: 1.25rem;
+  text-align: center;
+  color: var(--text-secondary, #666);
+  font-size: 0.85rem;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.quick-reply-item {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  width: 100%;
+  text-align: left;
+  padding: 0.65rem 1rem;
+  border: none;
+  border-bottom: 1px solid var(--border);
+  background: transparent;
+  cursor: pointer;
+  transition: background 0.1s;
+}
+
+.quick-reply-item:last-child {
+  border-bottom: none;
+}
+
+.quick-reply-item:hover {
+  background: var(--bg-hover, #e8edf0);
+}
+
+.quick-reply-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--primary-dark, #128c4e);
+}
+
+.quick-reply-body {
+  font-size: 0.78rem;
+  color: var(--text-secondary, #666);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.btn-quick-replies {
+  font-size: 1rem;
+  line-height: 1;
+}
+
+/* Make the room-input-footer relative so the popover anchors to it */
+.room-input-footer {
+  position: relative;
+}
+
+/* Dark-mode additions */
+[data-theme='dark'] .chat-status-filter-bar,
+[data-theme='dark'] .status-filter-pill {
+  background: #1a2129;
+  border-color: #2f3b43;
+  color: #aebac1;
+}
+
+[data-theme='dark'] .status-filter-pill.active {
+  background: #0d2e1e;
+  border-color: #25d366;
+  color: #25d366;
+}
+
+[data-theme='dark'] .room-status-btn {
+  background: #1a2129;
+  border-color: #2f3b43;
+  color: #aebac1;
+}
+
+[data-theme='dark'] .quick-replies-popover {
+  background: #202c33;
+  border-color: #2f3b43;
+}
+
+[data-theme='dark'] .quick-replies-header {
+  color: #e9edef;
+  border-color: #2f3b43;
+}
+
+[data-theme='dark'] .quick-reply-item {
+  border-color: #2f3b43;
+}
+
+[data-theme='dark'] .quick-reply-item:hover {
+  background: #2a3942;
+}
+
+[data-theme='dark'] .quick-reply-name {
+  color: #25d366;
+}
+
+[data-theme='dark'] .quick-reply-body {
+  color: #8696a0;
+}

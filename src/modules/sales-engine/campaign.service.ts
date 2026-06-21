@@ -272,6 +272,29 @@ export class CampaignService implements OnModuleInit {
     await this.optOuts.delete(id);
   }
 
+  async report(campaignId: string): Promise<Record<string, unknown>> {
+    const campaign = await this.campaigns.findOne({ where: { id: campaignId } });
+    if (!campaign) throw new NotFoundException('Campanha não encontrada');
+    const rows = await this.outreach.find({ where: { campaignId } });
+    const total = rows.length;
+    const byStage = rows.reduce((acc, r) => { acc[r.stage] = (acc[r.stage] ?? 0) + 1; return acc; }, {} as Record<string, number>);
+    const replied = (byStage['replied'] ?? 0) + (byStage['qualified'] ?? 0) + (byStage['won'] ?? 0);
+    const sent = (byStage['sent'] ?? 0) + replied;
+    return {
+      total,
+      sent,
+      replied,
+      won: byStage['won'] ?? 0,
+      failed: byStage['failed'] ?? 0,
+      optedOut: byStage['opted_out'] ?? 0,
+      replyRate: sent > 0 ? Math.round((replied / sent) * 100) : 0,
+      conversionRate: sent > 0 ? Math.round(((byStage['won'] ?? 0) / sent) * 100) : 0,
+      avgScore: total > 0 ? Math.round(rows.reduce((s, r) => s + r.score, 0) / total) : 0,
+      campaign: { id: campaign.id, name: campaign.name, status: campaign.status, scheduledAt: campaign.scheduledAt, createdAt: campaign.createdAt },
+      byStage,
+    };
+  }
+
   async attachMedia(campaignId: string, mediaUrl: string, mediaType: Campaign['mediaType']): Promise<Campaign> {
     await this.campaigns.update(campaignId, { mediaUrl, mediaType });
     const c = await this.campaigns.findOne({ where: { id: campaignId } });

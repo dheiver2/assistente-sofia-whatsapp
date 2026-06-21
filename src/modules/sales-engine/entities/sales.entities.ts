@@ -74,6 +74,12 @@ export class Campaign {
   @Column({ type: 'varchar', length: 20, nullable: true })
   mediaType: 'image' | 'video' | 'document' | 'audio' | null;
 
+  @Column({ type: 'datetime', nullable: true })
+  scheduledAt: Date | null;
+
+  @Column({ type: jsonColumnType(), nullable: true })
+  segments: Record<string, unknown> | null; // e.g. { minInactiveDays: 30, tags: ['vip'] }
+
   @CreateDateColumn()
   createdAt: Date;
 
@@ -119,6 +125,9 @@ export class Outreach {
 
   @Column({ type: 'text', nullable: true })
   error: string | null;
+
+  @Column({ type: 'varchar', length: 20, nullable: true })
+  variant: string | null; // 'A' or 'B' for A/B testing
 
   @CreateDateColumn()
   createdAt: Date;

@@ -3,7 +3,7 @@ import { read, utils } from 'xlsx';
 import {
   Loader2, Upload, Send, Sparkles, Trash2, Database,
   RefreshCw, MessageSquare, X, Pause, Play, Plus,
-  ChevronRight, Settings, Zap, BarChart3,
+  ChevronRight, Settings, Zap, BarChart3, Clock, FileText,
 } from 'lucide-react';
 import {
   sessionApi, salesApi, messageApi,
@@ -92,6 +92,12 @@ export function SalesEngine() {
   /* mídia da campanha */
   const [mediaUrl, setMediaUrl] = useState('');
   const [mediaType, setMediaType] = useState<'image' | 'video' | 'document' | 'audio' | ''>('');
+
+  /* agendamento */
+  const [scheduledAt, setScheduledAt] = useState('');
+
+  /* modal de relatório */
+  const [reportModal, setReportModal] = useState<{ open: boolean; data: Record<string, unknown> | null }>({ open: false, data: null });
 
   /* postgres form */
   const [pgName, setPgName] = useState('');
@@ -205,14 +211,14 @@ export function SalesEngine() {
       const leads: SalesLead[] = rawRows.map(row => ({
         name: String(row[nameCol] ?? ''), phone: String(row[phoneCol] ?? ''), attributes: row,
       }));
-      const campaign = await salesApi.createCampaign({ sessionId, name: cName, offerHint: cOffer || undefined, ratePerMinute: cRate } as Partial<Campaign>);
+      const campaign = await salesApi.createCampaign({ sessionId, name: cName, offerHint: cOffer || undefined, ratePerMinute: cRate, scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined } as Partial<Campaign>);
       const result = await salesApi.autoRun(campaign.id, leads) as Record<string, unknown>;
       if (mediaUrl && mediaType) {
         await salesApi.attachMedia(campaign.id, mediaUrl, mediaType);
       }
       toast.success('🚀 Campanha lançada!', `${String(result.generated ?? 0)} mensagens · ${String(result.approved ?? 0)} no disparo`);
       setCName(''); setCOffer(''); setCRate(6);
-      setMediaUrl(''); setMediaType('');
+      setMediaUrl(''); setMediaType(''); setScheduledAt('');
       setUploadedLeads([]); setUploadColumns([]); setUploadFileName(''); setUploadPreview([]); setRawRows([]);
       setWStep(0);
       setTab('campanhas');
@@ -337,7 +343,14 @@ export function SalesEngine() {
                           <span className="se-badge" style={{ background: STATUS_COLOR[c.status] + '22', color: STATUS_COLOR[c.status] }}>{STATUS_LABEL[c.status] ?? c.status}</span>
                           <span className="se-camp-rate">{c.ratePerMinute} msg/min</span>
                         </span>
-                        {prog && prog.total > 0 && (
+                        {c.scheduledAt && c.status === 'draft' ? (
+                          <div className="se-prog">
+                            <span className="se-prog-txt" style={{display:'flex',alignItems:'center',gap:4}}>
+                              <Clock size={12} style={{color:'#f59e0b'}} />
+                              Agendado para {new Date(c.scheduledAt).toLocaleDateString('pt-BR')} às {new Date(c.scheduledAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+                            </span>
+                          </div>
+                        ) : prog && prog.total > 0 && (
                           <div className="se-prog">
                             <div className="se-prog-bar"><div className="se-prog-fill" style={{ width: `${pct}%` }} /></div>
                             <span className="se-prog-txt">{prog.sent}/{prog.total} enviadas{prog.status === 'sending' ? ` · ~${prog.etaMinutes}min` : prog.status === 'paused' ? ' · pausada' : ' · concluída'}</span>
@@ -355,6 +368,11 @@ export function SalesEngine() {
                       </>}
                       {c.status === 'sending' && <button className="se-btn-sm" onClick={() => void salesApi.pause(c.id).then(refresh)}><Pause size={13} /> Pausar</button>}
                       {c.status === 'paused' && <button className="se-btn-sm primary" onClick={() => void salesApi.resume(c.id).then(refresh)}><Play size={13} /> Retomar</button>}
+                      {['done', 'sending'].includes(c.status) && (
+                        <button className="se-btn-sm" onClick={() => void salesApi.report(c.id).then(data => setReportModal({ open: true, data })).catch(() => setReportModal({ open: true, data: {} }))}>
+                          <FileText size={13} /> Relatório
+                        </button>
+                      )}
                       <button className="se-btn-icon danger" onClick={() => void salesApi.deleteCampaign(c.id).then(refresh)} title="Excluir"><Trash2 size={13} /></button>
                     </div>
 
@@ -528,6 +546,23 @@ export function SalesEngine() {
                 )}
               </div>
 
+              {/* Agendamento opcional */}
+              <div className="se-field" style={{marginTop:8}}>
+                <label>Agendar envio <span className="se-muted">(opcional)</span></label>
+                <input
+                  type="datetime-local"
+                  value={scheduledAt}
+                  onChange={e => setScheduledAt(e.target.value)}
+                  style={{background:'var(--bg-primary,#0f172a)',border:'1px solid var(--border,#334155)',borderRadius:8,color:'var(--text-primary,#e2e8f0)',padding:'8px 12px',fontSize:13.5,width:'100%',boxSizing:'border-box'}}
+                />
+                {scheduledAt && (
+                  <p className="se-muted" style={{marginTop:6,fontSize:13}}>
+                    <Clock size={12} style={{display:'inline',marginRight:4,verticalAlign:'middle'}} />
+                    Será disparado em {new Date(scheduledAt).toLocaleDateString('pt-BR')} às {new Date(scheduledAt).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'})}
+                  </p>
+                )}
+              </div>
+
               <div className="se-summary-box">
                 <span>📋</span>
                 <span><strong>{uploadedLeads.length} contatos</strong> de <strong>{uploadFileName}</strong></span>
@@ -635,6 +670,45 @@ export function SalesEngine() {
                 </tbody>
               </table>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── Modal relatório ── */}
+      {reportModal.open && (
+        <div className="se-overlay" onClick={() => setReportModal({ open: false, data: null })}>
+          <div className="se-modal se-report-modal" onClick={e => e.stopPropagation()}>
+            <div className="se-modal-header">
+              <h3><FileText size={15} /> Relatório da campanha</h3>
+              <button className="se-btn-icon" onClick={() => setReportModal({ open: false, data: null })}><X size={18} /></button>
+            </div>
+            <div className="se-modal-body">
+              {reportModal.data && Object.keys(reportModal.data).length > 0 ? (
+                <div className="se-report-grid">
+                  <div className="se-report-stat">
+                    <span className="se-report-value">{String(reportModal.data.totalSent ?? reportModal.data.sent ?? '—')}</span>
+                    <span className="se-report-label">Total enviados</span>
+                  </div>
+                  <div className="se-report-stat">
+                    <span className="se-report-value">{reportModal.data.replyRate != null ? `${String(reportModal.data.replyRate)}%` : reportModal.data.replied != null ? String(reportModal.data.replied) : '—'}</span>
+                    <span className="se-report-label">Taxa de resposta</span>
+                  </div>
+                  <div className="se-report-stat">
+                    <span className="se-report-value">{String(reportModal.data.conversions ?? reportModal.data.won ?? '—')}</span>
+                    <span className="se-report-label">Conversões</span>
+                  </div>
+                  <div className="se-report-stat">
+                    <span className="se-report-value">{reportModal.data.avgScore != null ? String(reportModal.data.avgScore) : '—'}</span>
+                    <span className="se-report-label">Score médio</span>
+                  </div>
+                </div>
+              ) : (
+                <p className="se-muted" style={{textAlign:'center',padding:'24px 0'}}>Nenhum dado disponível para esta campanha.</p>
+              )}
+            </div>
+            <div className="se-modal-footer">
+              <button className="se-btn-secondary" onClick={() => setReportModal({ open: false, data: null })}>Fechar</button>
+            </div>
           </div>
         </div>
       )}

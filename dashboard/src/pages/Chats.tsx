@@ -17,11 +17,13 @@ import {
 import {
   sessionApi,
   messageApi,
+  templateApi,
   asMessageType,
   type Session,
   type Chat,
   type ChatMessage,
   type MessageType,
+  type MessageTemplate,
 } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -113,6 +115,15 @@ export function Chats() {
   const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
   const [messageInput, setMessageInput] = useState<string>('');
   const [sending, setSending] = useState<boolean>(false);
+
+  // Chat status tracking (local state, keyed by chatId)
+  const [chatStatus, setChatStatus] = useState<Record<string, 'open' | 'pending' | 'resolved'>>({});
+  const [statusFilter, setStatusFilter] = useState<'all' | 'open' | 'pending' | 'resolved'>('all');
+
+  // Quick replies (templates)
+  const [showQuickReplies, setShowQuickReplies] = useState<boolean>(false);
+  const [quickReplies, setQuickReplies] = useState<MessageTemplate[]>([]);
+  const [loadingQuickReplies, setLoadingQuickReplies] = useState<boolean>(false);
 
   // File attachments
   const [attachment, setAttachment] = useState<{
@@ -415,6 +426,37 @@ export function Chats() {
     }
   };
 
+  const handleSetChatStatus = async (status: 'open' | 'pending' | 'resolved') => {
+    if (!selectedSessionId || !activeChat) return;
+    setChatStatus(prev => ({ ...prev, [activeChat.id]: status }));
+    await sessionApi.setChatStatus(selectedSessionId, activeChat.id, status).catch(() => {
+      // Best-effort: keep local state even if the API doesn't support this endpoint yet
+    });
+  };
+
+  const handleOpenQuickReplies = async () => {
+    if (showQuickReplies) {
+      setShowQuickReplies(false);
+      return;
+    }
+    setShowQuickReplies(true);
+    if (!selectedSessionId) return;
+    setLoadingQuickReplies(true);
+    try {
+      const templates = await templateApi.list(selectedSessionId);
+      setQuickReplies(templates);
+    } catch {
+      setQuickReplies([]);
+    } finally {
+      setLoadingQuickReplies(false);
+    }
+  };
+
+  const handleQuickReplySelect = (template: MessageTemplate) => {
+    setMessageInput(template.body);
+    setShowQuickReplies(false);
+  };
+
   useEffect(() => {
     if (activeChat) {
       void loadMessages(activeChat.id);
@@ -602,11 +644,15 @@ export function Chats() {
     return date.toLocaleDateString([], { month: 'short', day: 'numeric' });
   };
 
-  const filteredChats = chats.filter(
-    c =>
+  const filteredChats = chats.filter(c => {
+    const matchesSearch =
       c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      c.id.toLowerCase().includes(searchQuery.toLowerCase()),
-  );
+      c.id.toLowerCase().includes(searchQuery.toLowerCase());
+    if (!matchesSearch) return false;
+    if (statusFilter === 'all') return true;
+    const cs = chatStatus[c.id] ?? 'open';
+    return cs === statusFilter;
+  });
 
   return (
     <div className="chats-page">
@@ -673,6 +719,23 @@ export function Chats() {
               </div>
             </div>
 
+            {/* Status filter pills */}
+            <div className="chat-status-filter-bar">
+              {(['all', 'open', 'pending', 'resolved'] as const).map(f => (
+                <button
+                  key={f}
+                  type="button"
+                  className={`status-filter-pill ${statusFilter === f ? 'active' : ''} pill-${f}`}
+                  onClick={() => setStatusFilter(f)}
+                >
+                  {f === 'all' && t('chats.filter.all', 'Todas')}
+                  {f === 'open' && `🟢 ${t('chats.filter.open', 'Abertas')}`}
+                  {f === 'pending' && `🟡 ${t('chats.filter.pending', 'Pendentes')}`}
+                  {f === 'resolved' && `✅ ${t('chats.filter.resolved', 'Resolvidas')}`}
+                </button>
+              ))}
+            </div>
+
             {/* Chat list */}
             <div className="chats-list">
               {loadingChats ? (
@@ -736,6 +799,27 @@ export function Chats() {
                   <div className="room-contact-info">
                     <h3>{activeChat.name || activeChat.id.split('@')[0]}</h3>
                     <span>{activeChat.id}</span>
+                  </div>
+                  <div className="room-status-actions">
+                    {(['open', 'pending', 'resolved'] as const).map(s => {
+                      const current = chatStatus[activeChat.id] ?? 'open';
+                      const labels: Record<string, string> = {
+                        open: `🟢 ${t('chats.status.open', 'Aberta')}`,
+                        pending: `🟡 ${t('chats.status.pending', 'Pendente')}`,
+                        resolved: `✅ ${t('chats.status.resolved', 'Resolvida')}`,
+                      };
+                      return (
+                        <button
+                          key={s}
+                          type="button"
+                          className={`room-status-btn status-${s} ${current === s ? 'active' : ''}`}
+                          onClick={() => void handleSetChatStatus(s)}
+                          title={labels[s]}
+                        >
+                          {labels[s]}
+                        </button>
+                      );
+                    })}
                   </div>
                 </header>
 
@@ -984,6 +1068,39 @@ export function Chats() {
                   </div>
                 )}
 
+                {/* Quick replies popover */}
+                {showQuickReplies && (
+                  <div className="quick-replies-popover">
+                    <div className="quick-replies-header">
+                      <span>{t('chats.quickReplies', 'Respostas Rápidas')}</span>
+                      <button type="button" className="btn-close-quick-replies" onClick={() => setShowQuickReplies(false)}>
+                        <X size={16} />
+                      </button>
+                    </div>
+                    <div className="quick-replies-list">
+                      {loadingQuickReplies ? (
+                        <div className="quick-replies-loading">
+                          <Loader2 className="animate-spin" size={18} />
+                        </div>
+                      ) : quickReplies.length === 0 ? (
+                        <div className="quick-replies-empty">{t('chats.noTemplates', 'Nenhum template encontrado')}</div>
+                      ) : (
+                        quickReplies.map(tpl => (
+                          <button
+                            key={tpl.id}
+                            type="button"
+                            className="quick-reply-item"
+                            onClick={() => handleQuickReplySelect(tpl)}
+                          >
+                            <span className="quick-reply-name">{tpl.name}</span>
+                            <span className="quick-reply-body">{tpl.body}</span>
+                          </button>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Message input bar */}
                 <footer className="room-input-footer">
                   <form onSubmit={handleSend} className="input-form">
@@ -1023,6 +1140,17 @@ export function Chats() {
                       disabled={!canWrite || sending}
                       className="message-text-input"
                     />
+
+                    <button
+                      type="button"
+                      onClick={() => void handleOpenQuickReplies()}
+                      disabled={!canWrite || sending}
+                      className={`btn-input-accessory btn-quick-replies ${showQuickReplies ? 'active' : ''}`}
+                      title={t('chats.quickRepliesTitle', 'Respostas rápidas')}
+                    >
+                      ⚡
+                    </button>
+
                     <button
                       type="submit"
                       disabled={!canWrite || (!messageInput.trim() && !attachment) || sending}

@@ -135,6 +135,13 @@ export class SalesEngineController {
     return this.campaignService.progress(id);
   }
 
+  // ---- Analytics / report ----
+  @Get('campaigns/:id/report')
+  @ApiOperation({ summary: 'Analytics detalhado da campanha (reply rate, conversion rate, by stage)' })
+  report(@Param('id') id: string): Promise<Record<string, unknown>> {
+    return this.campaignService.report(id);
+  }
+
   // ---- Funil / métricas (Item 4) ----
   @Get('campaigns/:id/metrics')
   @ApiOperation({ summary: 'Métricas do funil da campanha (contagem por estágio)' })
