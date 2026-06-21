@@ -35,6 +35,7 @@ import { PluginsModule } from './core/plugins';
 import { PluginsApiModule } from './modules/plugins/plugins.module';
 import { ExtensionsModule } from './plugins/extensions/extensions.module';
 import { ContactsModule } from './modules/contacts/contacts.module';
+import { RecommendationsModule } from './modules/recommendations/recommendations.module';
 
 // Only import QueueModule if explicitly enabled to avoid Redis connection errors
 const queueModules: Array<Type | DynamicModule> = [];
@@ -224,6 +225,7 @@ if (dashboardServingEnabled && dashboardBuildPresent) {
     ExtensionsModule, // First-party extension plugins (registered disabled)
     ContactsModule, // Unified contact database with tags and notes
     SalesEngineModule, // Motor de Vendas (MVP): gera abordagens personalizadas por lead
+    RecommendationsModule, // AI multi-agent recommendation pipeline
     ...serveStaticModules, // Bundled dashboard SPA (production single-port setup)
   ],
 })

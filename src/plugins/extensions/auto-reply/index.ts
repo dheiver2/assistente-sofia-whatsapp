@@ -21,6 +21,7 @@ import * as fs from 'fs';
 import { PluginContext, IPlugin } from '../../../core/plugins';
 import { HookContext, HookResult } from '../../../core/hooks';
 import { IncomingMessage } from '../../../engine/interfaces/whatsapp-engine.interface';
+import { ollamaChat } from '../../../common/ollama/ollama.client';
 
 const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://host.docker.internal:11434';
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:7b-instruct';
@@ -167,32 +168,16 @@ export class AutoReplyPlugin implements IPlugin {
   }
 
   private async generate(model: string, systemPrompt: string, history: ChatTurn[], userText: string): Promise<string> {
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
-    try {
-      const res = await fetch(`${OLLAMA_URL}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model,
-          stream: false,
-          messages: [{ role: 'system', content: systemPrompt }, ...history, { role: 'user', content: userText }],
-          options: { temperature: 0.7, num_predict: 140 },
-        }),
-        signal: controller.signal,
-      });
-      if (!res.ok) {
-        throw new Error(`Ollama HTTP ${res.status}`);
-      }
-      const data = (await res.json()) as { message?: { content?: string } };
-      const text = data.message?.content?.trim();
-      if (!text) {
-        throw new Error('empty AI response');
-      }
-      return text;
-    } finally {
-      clearTimeout(timer);
-    }
+    const text = (await ollamaChat({
+      model,
+      messages: [{ role: 'system', content: systemPrompt }, ...history, { role: 'user', content: userText }],
+      temperature: 0.7,
+      numPredict: 140,
+      url: OLLAMA_URL,
+      timeoutMs: TIMEOUT_MS,
+    })).trim();
+    if (!text) throw new Error('empty AI response');
+    return text;
   }
 
   private onMessage(context: PluginContext, ctx: HookContext<IncomingMessage>): HookResult {

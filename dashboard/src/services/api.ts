@@ -748,6 +748,110 @@ export interface Contact {
   updatedAt: string;
 }
 
+// =============================================================================
+// Recommendations API
+// =============================================================================
+
+export interface CatalogProduct {
+  id: string;
+  sessionId?: string;
+  name: string;
+  category?: string;
+  description?: string;
+  price?: number;
+  keywords?: string[];
+  tags?: string[];
+  imageUrl?: string;
+  videoUrl?: string;
+  documentUrl?: string;
+  thumbnailUrl?: string;
+  active: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CatalogProductPayload {
+  name: string;
+  category?: string;
+  description?: string;
+  price?: number;
+  keywords?: string[];
+  tags?: string[];
+  imageUrl?: string;
+  videoUrl?: string;
+  documentUrl?: string;
+  thumbnailUrl?: string;
+  active?: boolean;
+}
+
+export interface CustomerInsight {
+  summary: string;
+  interests?: string[];
+  intent?: string;
+}
+
+export interface ProductRecommendation {
+  id: string;
+  sessionId: string;
+  phone: string;
+  productId: string;
+  productName: string;
+  score: number;
+  message: string;
+  mediaType?: 'image' | 'video' | 'document' | null;
+  status: 'pending' | 'sent' | 'failed';
+  createdAt: string;
+}
+
+export interface AnalyzeResult {
+  customerInsight: CustomerInsight;
+  recommendations: ProductRecommendation[];
+}
+
+export interface BatchResult {
+  generated: number;
+  details?: ProductRecommendation[];
+}
+
+export const recommendationsApi = {
+  // Catalog
+  listProducts: () => request<CatalogProduct[]>('/recommendations/catalog'),
+  createProduct: (data: CatalogProductPayload) =>
+    request<CatalogProduct>('/recommendations/catalog', { method: 'POST', body: JSON.stringify(data) }),
+  updateProduct: (id: string, data: Partial<CatalogProductPayload>) =>
+    request<CatalogProduct>(`/recommendations/catalog/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+  deleteProduct: (id: string) => request<void>(`/recommendations/catalog/${id}`, { method: 'DELETE' }),
+
+  // Analysis
+  analyze: (sessionId: string, phone: string, topN = 3) =>
+    request<AnalyzeResult>('/recommendations/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, phone, topN }),
+    }),
+  batch: (sessionId: string, phones: string[], topN = 3) =>
+    request<BatchResult>('/recommendations/batch', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, phones, topN }),
+    }),
+
+  // Pending recommendations
+  listPending: (sessionId: string) =>
+    request<ProductRecommendation[]>(`/recommendations/pending?sessionId=${encodeURIComponent(sessionId)}`),
+  deliver: (id: string) =>
+    request<{ ok: boolean }>(`/recommendations/${id}/deliver`, { method: 'POST' }),
+  deliverBatch: (sessionId: string, phone: string) =>
+    request<{ sent: number }>('/recommendations/deliver-batch', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId, phone }),
+    }),
+  deletePending: (id: string) => request<void>(`/recommendations/${id}`, { method: 'DELETE' }),
+  deliverAll: (sessionId: string) =>
+    request<{ sent: number }>('/recommendations/deliver-all', {
+      method: 'POST',
+      body: JSON.stringify({ sessionId }),
+    }),
+};
+
 export const contactsApi = {
   list: (sessionId: string, tag?: string, search?: string) =>
     request<Contact[]>(`/contacts?${new URLSearchParams({

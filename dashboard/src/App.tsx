@@ -16,6 +16,7 @@ const Chats = lazy(() => import('./pages/Chats').then(m => ({ default: m.Chats }
 const SalesEngine = lazy(() => import('./pages/SalesEngine').then(m => ({ default: m.SalesEngine })));
 const Config = lazy(() => import('./pages/Config').then(m => ({ default: m.Config })));
 const Contacts = lazy(() => import('./pages/Contacts').then(m => ({ default: m.Contacts })));
+const Recommendations = lazy(() => import('./pages/Recommendations'));
 const Landing = lazy(() => import('./pages/Landing'));
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -104,6 +105,7 @@ function AppContent() {
             <Route path="conversas" element={<Chats />} />
             <Route path="campanhas" element={<SalesEngine />} />
             <Route path="contatos" element={<Contacts />} />
+            <Route path="recomendacoes" element={<Recommendations />} />
             <Route path="config" element={<Config />} />
             {/* Legacy redirects — keep old URLs working */}
             <Route path="sessions" element={<Navigate to="/sessoes" replace />} />

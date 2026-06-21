@@ -70,7 +70,8 @@
     "messageTester": "Testador de Mensagens",
     "infrastructure": "Infraestrutura",
     "plugins": "Plugins",
-    "logs": "Logs"
+    "logs": "Logs",
+    "recommendations": "Recomendações"
   },
   "chats": {
     "subtitle": "Envie e responda mensagens do WhatsApp em tempo real",

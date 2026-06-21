@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { Session } from '../session/entities/session.entity';
 import { createLogger } from '../../common/services/logger.service';
 import { GenerateOutreachDto, LeadDto, OutreachResultDto } from './dto/generate-outreach.dto';
+import { ollamaChat } from '../../common/ollama/ollama.client';
 
 interface SessionAi {
   persona?: string;
@@ -94,23 +95,18 @@ export class SalesEngineService {
       { role: 'user', content: params.lastMessage },
     ];
 
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
-      const res = await fetch(`${this.ollamaUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ model, stream: false, messages, options: { temperature: 0.7, num_predict: 250 } }),
-        signal: controller.signal,
+      return await ollamaChat({
+        model,
+        messages,
+        temperature: 0.7,
+        numPredict: 250,
+        url: this.ollamaUrl,
+        timeoutMs: this.timeoutMs,
       });
-      if (!res.ok) throw new Error(`Ollama HTTP ${res.status}`);
-      const data = (await res.json()) as { message?: { content?: string } };
-      return data.message?.content?.trim() ?? '';
     } catch (err) {
       this.logger.warn('Falha no follow-up de conversa', { error: String(err) });
       return '';
-    } finally {
-      clearTimeout(timer);
     }
   }
 
@@ -120,29 +116,20 @@ export class SalesEngineService {
       null,
       2,
     )}`;
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), this.timeoutMs);
     try {
-      const res = await fetch(`${this.ollamaUrl}/api/chat`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          model,
-          stream: false,
-          format: 'json',
-          messages: [
-            { role: 'system', content: this.buildSystemPrompt(ai, offerHint) },
-            { role: 'user', content: userContent },
-          ],
-          options: { temperature: 0.6, num_predict: 400 },
-        }),
-        signal: controller.signal,
+      const content = await ollamaChat({
+        model,
+        json: true,
+        messages: [
+          { role: 'system', content: this.buildSystemPrompt(ai, offerHint) },
+          { role: 'user', content: userContent },
+        ],
+        temperature: 0.6,
+        numPredict: 400,
+        url: this.ollamaUrl,
+        timeoutMs: this.timeoutMs,
       });
-      if (!res.ok) {
-        throw new Error(`Ollama HTTP ${res.status}`);
-      }
-      const data = (await res.json()) as { message?: { content?: string } };
-      const parsed = JSON.parse(data.message?.content ?? '{}') as {
+      const parsed = JSON.parse(content || '{}') as {
         need?: string;
         score?: number;
         message?: string;
@@ -157,8 +144,6 @@ export class SalesEngineService {
     } catch (err) {
       this.logger.warn('Falha ao gerar abordagem para lead', { error: String(err) });
       return { lead, need: '', score: 0, message: '', model, error: String(err) };
-    } finally {
-      clearTimeout(timer);
     }
   }
 }
