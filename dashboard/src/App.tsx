@@ -16,7 +16,7 @@ const Chats = lazy(() => import('./pages/Chats').then(m => ({ default: m.Chats }
 const SalesEngine = lazy(() => import('./pages/SalesEngine').then(m => ({ default: m.SalesEngine })));
 const Config = lazy(() => import('./pages/Config').then(m => ({ default: m.Config })));
 const Contacts = lazy(() => import('./pages/Contacts').then(m => ({ default: m.Contacts })));
-
+const Landing = lazy(() => import('./pages/Landing'));
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
@@ -88,15 +88,16 @@ function AppContent() {
     </div>
   );
 
-  if (!isAuthenticated) {
-    return <Suspense fallback={loadingFallback}><Login onLogin={handleLogin} /></Suspense>;
-  }
-
   return (
     <ToastProvider>
       <BrowserRouter>
         <Suspense fallback={loadingFallback}>
         <Routes>
+          <Route path="/landing" element={<Landing />} />
+          {!isAuthenticated && (
+            <Route path="*" element={<Login onLogin={handleLogin} />} />
+          )}
+          {isAuthenticated && (
           <Route path="/" element={<Layout onLogout={handleLogout} userRole={role} />}>
             <Route index element={<Dashboard />} />
             <Route path="sessoes" element={<Sessions />} />
@@ -117,6 +118,7 @@ function AppContent() {
             <Route path="message-tester" element={<Navigate to="/conversas" replace />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
+          )}
         </Routes>
         </Suspense>
       </BrowserRouter>
