@@ -1,10 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { MessageSquare, Send, Webhook, Activity, Loader2, MessagesSquare, Megaphone, Smartphone, ArrowRight } from 'lucide-react';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useSessionsQuery, useSessionStatsQuery, useWebhooksQuery, useStopSessionMutation } from '../hooks/queries';
-import { sessionApi } from '../services/api';
 import { PageHeader } from '../components/PageHeader';
 import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
@@ -35,21 +34,6 @@ function statusDotColor(status: string): string {
   return 'var(--text-muted)';
 }
 
-function OnboardStep({ done, label, link, linkLabel, hint, onNavigate }: { done: boolean; label: string; link: string; linkLabel: string; hint?: string; onNavigate: (to: string) => void }) {
-  return (
-    <div className={`onboard-step ${done ? 'done' : ''}`}>
-      <span className="onboard-check">{done ? '✅' : '⬜'}</span>
-      <div className="onboard-step-body">
-        <span className="onboard-step-label">{label}</span>
-        {hint && <span className="onboard-step-hint">{hint}</span>}
-      </div>
-      {!done && (
-        <button type="button" className="onboard-link" onClick={() => onNavigate(link)}>{linkLabel}</button>
-      )}
-    </div>
-  );
-}
-
 export function Dashboard() {
   const { t } = useTranslation();
   useDocumentTitle(t('dashboard.title'));
@@ -60,24 +44,8 @@ export function Dashboard() {
   const { data: webhooks = [] } = useWebhooksQuery();
   const stopMutation = useStopSessionMutation();
 
-  // Onboarding state — tracked in localStorage
-  const [onboard, setOnboard] = useState({
-    session: false,
-    ai: localStorage.getItem('onboard_ai') === '1',
-    message: localStorage.getItem('onboard_msg') === '1',
-    campaign: localStorage.getItem('onboard_camp') === '1',
-  });
-
-  // Check session health for onboarding
-  useEffect(() => {
-    sessionApi.getStats().then(s => {
-      if (s.ready > 0) setOnboard(o => ({ ...o, session: true }));
-    }).catch(() => {});
-  }, []);
-
   const [disconnectId, setDisconnectId] = useState<string | null>(null);
 
-  const onboardDone = Object.values(onboard).every(Boolean);
   const loading = loadingSessions;
   const error = sessionsError instanceof Error
     ? sessionsError.message
@@ -196,21 +164,6 @@ export function Dashboard() {
           </button>
         ))}
       </div>
-
-      {!onboardDone && (
-        <div className="onboard-card">
-          <div className="onboard-header">
-            <span className="onboard-title">🚀 Primeiros passos — configure em minutos</span>
-            <span className="onboard-sub">{Object.values(onboard).filter(Boolean).length} de 4 concluídos</span>
-          </div>
-          <div className="onboard-steps">
-            <OnboardStep done={onboard.session} label="Conectar sessão WhatsApp" link="/sessoes" linkLabel="Criar sessão →" onNavigate={navigate} />
-            <OnboardStep done={onboard.ai} label="Configurar assistente de IA" link="/sessoes" linkLabel="Configurar →" hint="Aba IA na sessão criada" onNavigate={navigate} />
-            <OnboardStep done={onboard.message} label="Enviar primeira mensagem" link="/conversas" linkLabel="Ir para Conversas →" onNavigate={navigate} />
-            <OnboardStep done={onboard.campaign} label="Lançar primeira campanha" link="/campanhas" linkLabel="Ir para Campanhas →" onNavigate={navigate} />
-          </div>
-        </div>
-      )}
 
       <section className="sessions-section">
         <div className="section-header">
