@@ -333,7 +333,7 @@
   border-radius: 8px;
   cursor: pointer;
   transition: background 0.15s, color 0.15s, border-color 0.15s;
-  background: var(--bg-white);
+  background: var(--bg-light);
   border: 1px solid var(--border);
   color: var(--text-secondary);
 }
@@ -345,9 +345,8 @@
 }
 
 .btn-action:hover {
-  background: var(--bg-light);
+  background: var(--bg-white);
   color: var(--text-primary);
-  border-color: var(--text-muted);
 }
 
 .btn-action:disabled {
@@ -364,11 +363,6 @@
   background: color-mix(in srgb, var(--error) 12%, transparent);
   border-color: color-mix(in srgb, var(--error) 45%, transparent);
   color: var(--error);
-}
-
-/* Separate the destructive action to the far right of the row. */
-.card-actions .btn-action.danger {
-  margin-left: auto;
 }
 
 @media (max-width: 1400px) {
