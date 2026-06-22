@@ -78,3 +78,6 @@ _docs/
 # Allow src/data (static config files inside source tree)
 !dashboard/src/data/
 !dashboard/src/data/**
+
+# Stray SQLite db accidentally created at repo root
+/openwa
