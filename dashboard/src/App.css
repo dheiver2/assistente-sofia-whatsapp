@@ -133,3 +133,13 @@ a:hover {
 .error-banner-text {
   color: #ef4444;
 }
+
+/* ── Brand logo: light/dark variants (dark-mode legibility) ── */
+.logo-dark { display: none; }
+.logo-light { display: block; }
+[data-theme='dark'] .logo-light { display: none; }
+[data-theme='dark'] .logo-dark { display: block; }
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) .logo-light { display: none; }
+  :root:not([data-theme='light']) .logo-dark { display: block; }
+}

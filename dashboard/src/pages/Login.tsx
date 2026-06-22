@@ -57,7 +57,8 @@ export function Login({ onLogin }: LoginProps) {
     <div className="login-container">
       <div className="login-card">
         <div className="login-logo">
-          <img src="/brand-logo.svg" alt="Mangaba" className="logo-icon" />
+          <img src="/brand-logo.svg" alt="Mangaba" className="logo-icon logo-light" />
+          <img src="/brand-logo-dark.svg" alt="Mangaba" className="logo-icon logo-dark" />
           <span className="version-info">
             {t('login.version', {
               version: __APP_VERSION__,

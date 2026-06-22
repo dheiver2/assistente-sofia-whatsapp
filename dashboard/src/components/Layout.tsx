@@ -162,7 +162,8 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
             <span className="sidebar-monogram" aria-label={t('common.appName')}>m</span>
           ) : (
             <div className="sidebar-brand">
-              <img src="/brand-logo.svg" alt="Mangaba" className="sidebar-wordmark" />
+              <img src="/brand-logo.svg" alt="Mangaba" className="sidebar-wordmark logo-light" />
+              <img src="/brand-logo-dark.svg" alt="Mangaba" className="sidebar-wordmark logo-dark" />
               <span className="brand-subtitle">{t('common.appSubtitle')}</span>
             </div>
           )}
