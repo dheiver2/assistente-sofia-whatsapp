@@ -1606,3 +1606,66 @@
   .inbox-layout:has(.room-container) .inbox-list { display: none; }
   .inbox-layout:not(:has(.room-container)) .chats-room { display: none; }
 }
+
+/* ── Copilot: sugestões de produtos (IA) no painel do contato ── */
+.contact-suggest-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.45rem;
+  width: 100%;
+  padding: 0.55rem 0.7rem;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 10%, transparent);
+  border: 1px solid color-mix(in srgb, var(--primary) 30%, transparent);
+  border-radius: var(--radius, 10px);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.contact-suggest-btn:hover:not(:disabled) { background: color-mix(in srgb, var(--primary) 16%, transparent); }
+.contact-suggest-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.contact-suggest-list { display: flex; flex-direction: column; gap: 0.5rem; margin-top: 0.6rem; }
+
+.contact-suggest-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 10px);
+  padding: 0.6rem 0.7rem;
+  background: var(--bg-light);
+}
+.contact-suggest-top { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
+.contact-suggest-name { font-size: 0.82rem; font-weight: 700; color: var(--text-primary); }
+.contact-suggest-score {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 12%, transparent);
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+}
+.contact-suggest-msg {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  margin: 0.35rem 0 0.5rem;
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.contact-suggest-use {
+  width: 100%;
+  padding: 0.4rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.contact-suggest-use:hover:not(:disabled) { border-color: var(--primary); color: var(--primary); }

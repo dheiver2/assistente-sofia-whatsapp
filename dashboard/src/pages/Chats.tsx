@@ -16,17 +16,20 @@ import {
   Tag,
   Bot,
   Hash,
+  Sparkles,
 } from 'lucide-react';
 import {
   sessionApi,
   messageApi,
   templateApi,
+  recommendationsApi,
   asMessageType,
   type Session,
   type Chat,
   type ChatMessage,
   type MessageType,
   type MessageTemplate,
+  type ProductRecommendation,
 } from '../services/api';
 import { useWebSocket } from '../hooks/useWebSocket';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
@@ -132,6 +135,10 @@ export function Chats() {
   const [loadingMessages, setLoadingMessages] = useState<boolean>(false);
   const [messageInput, setMessageInput] = useState<string>('');
   const [sending, setSending] = useState<boolean>(false);
+
+  // AI product suggestions (copilot) for the active contact
+  const [suggestions, setSuggestions] = useState<ProductRecommendation[]>([]);
+  const [loadingSuggestions, setLoadingSuggestions] = useState<boolean>(false);
 
   // Chat status tracking (local state, keyed by chatId)
   const [chatStatus, setChatStatus] = useState<Record<string, 'open' | 'pending' | 'resolved'>>({});
@@ -474,7 +481,28 @@ export function Chats() {
     setShowQuickReplies(false);
   };
 
+  // Copilot: run the recommendation engine for the active contact and surface product suggestions
+  // right in the conversation. Clicking "Usar" drops the crafted message into the input for review.
+  const handleGenerateSuggestions = async () => {
+    if (!activeChat || !selectedSessionId) return;
+    const phone = activeChat.id.split('@')[0];
+    setLoadingSuggestions(true);
+    setSuggestions([]);
+    try {
+      const res = await recommendationsApi.analyze(selectedSessionId, phone, 3);
+      setSuggestions(res.recommendations ?? []);
+      if (!res.recommendations?.length) {
+        toast.info(t('chats.suggestions.none', 'Sem sugestões'), t('chats.suggestions.noneDesc', 'Nenhum produto recomendado para este contato.'));
+      }
+    } catch (e) {
+      toast.error(t('chats.suggestions.error', 'Erro ao gerar sugestões'), e instanceof Error ? e.message : '');
+    } finally {
+      setLoadingSuggestions(false);
+    }
+  };
+
   useEffect(() => {
+    setSuggestions([]); // clear copilot suggestions when switching conversations
     if (activeChat) {
       void loadMessages(activeChat.id);
       setChats(prev => prev.map(c => (c.id === activeChat.id ? { ...c, unreadCount: 0 } : c)));
@@ -1244,6 +1272,44 @@ export function Chats() {
                   </span>
                 </div>
               </div>
+
+              {/* Copilot: AI product suggestions for this contact */}
+              {!activeChat.isGroup && (
+                <div className="contact-section">
+                  <span className="contact-section-label">{t('chats.suggestions.label', 'Sugestões de produtos (IA)')}</span>
+                  <button
+                    type="button"
+                    className="contact-suggest-btn"
+                    onClick={() => void handleGenerateSuggestions()}
+                    disabled={loadingSuggestions || !canWrite}
+                  >
+                    {loadingSuggestions ? <Loader2 size={15} className="animate-spin" /> : <Sparkles size={15} />}
+                    {loadingSuggestions ? t('chats.suggestions.loading', 'Analisando…') : t('chats.suggestions.generate', 'Gerar sugestões')}
+                  </button>
+
+                  {suggestions.length > 0 && (
+                    <div className="contact-suggest-list">
+                      {suggestions.map(s => (
+                        <div key={s.id} className="contact-suggest-item">
+                          <div className="contact-suggest-top">
+                            <span className="contact-suggest-name">{s.productName}</span>
+                            <span className="contact-suggest-score">{Math.round((s.score ?? 0) * 100)}%</span>
+                          </div>
+                          <p className="contact-suggest-msg">{s.message}</p>
+                          <button
+                            type="button"
+                            className="contact-suggest-use"
+                            onClick={() => setMessageInput(s.message)}
+                            disabled={!canWrite}
+                          >
+                            {t('chats.suggestions.use', 'Usar mensagem')}
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
 
               {/* AI auto-reply hint */}
               <div className="contact-ai-note">
