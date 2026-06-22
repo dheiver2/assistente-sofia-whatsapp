@@ -6,7 +6,10 @@
 .ct-page {
   display: flex;
   flex-direction: column;
-  height: 100%;
+  /* Fill the area below the 60px topbar. `height: 100%` was fragile here because the
+     parent main-content has no definite height, which could collapse the page. */
+  height: calc(100vh - 60px);
+  min-height: 0;
   background: var(--bg-light);
   color: var(--text-primary);
 }

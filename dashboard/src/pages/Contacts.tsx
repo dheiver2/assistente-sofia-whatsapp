@@ -59,14 +59,15 @@ function ContactAvatar({ contact, size = 38 }: { contact: Contact; size?: number
 }
 
 function StatusBadge({ status }: { status: Contact['status'] }) {
-  const labels: Record<Contact['status'], string> = {
+  const labels: Record<string, string> = {
     active: 'Ativo',
     blocked: 'Bloqueado',
     opted_out: 'Opt-out',
   };
+  const key = status ?? 'active';
   return (
-    <span className={`ct-status ct-status-${status}`}>
-      {labels[status]}
+    <span className={`ct-status ct-status-${key}`}>
+      {labels[key] ?? key}
     </span>
   );
 }
@@ -130,16 +131,18 @@ export function Contacts() {
     contactsApi
       .list(sessionId, tagFilter || undefined, searchTerm || undefined)
       .then(setContacts)
-      .catch(err => toast.error(String(err.message ?? err)))
+      .catch(err => toast.error(String(err?.message ?? err)))
       .finally(() => setLoading(false));
   }, [sessionId, tagFilter, searchTerm, toast]);
 
+  // Debounce so typing in the search box doesn't fire one request per keystroke (race + flicker).
   useEffect(() => {
-    loadContacts();
+    const id = setTimeout(loadContacts, 300);
+    return () => clearTimeout(id);
   }, [loadContacts]);
 
   /* ── Tags únicas de todos os contatos ── */
-  const allTags = Array.from(new Set(contacts.flatMap(c => c.tags))).sort();
+  const allTags = Array.from(new Set(contacts.flatMap(c => c.tags ?? []).filter(Boolean))).sort();
 
   /* ── Abrir drawer de perfil ── */
   function openDrawer(contact: Contact) {
@@ -150,6 +153,8 @@ export function Contacts() {
 
   function closeDrawer() {
     setDrawerOpen(false);
+    // Unmount the overlay after the slide-out animation so a closed drawer never lingers.
+    setTimeout(() => setSelectedContact(null), 240);
   }
 
   /* ── Adicionar nova tag ── */
@@ -411,7 +416,7 @@ export function Contacts() {
                     {/* Tags */}
                     <td onClick={e => e.stopPropagation()}>
                       <div className="ct-tags">
-                        {contact.tags.map(tag => (
+                        {(contact.tags ?? []).map(tag => (
                           <span key={tag} className={`tag-chip ${tagColorClass(tag)}`}>
                             {tag}
                             <button
