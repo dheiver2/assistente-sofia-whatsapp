@@ -150,6 +150,11 @@ export class AutoReplyPlugin implements IPlugin {
     context.registerHook('message:received', ctx =>
       Promise.resolve(this.onMessage(context, ctx as HookContext<IncomingMessage>)),
     );
+    // Mensagens fromMe (inclusive compostas no celular) chegam por este hook — usado para o
+    // handoff humano (pausar a IA quando um humano responde manualmente).
+    context.registerHook('message:sent', ctx =>
+      Promise.resolve(this.onOutgoing(context, ctx as HookContext<IncomingMessage>)),
+    );
     context.logger.log(
       `AI auto-reply enabled (model=${OLLAMA_MODEL()}, memória=${HISTORY_TURNS()} turnos, personas=${PERSONAS_FILE()})`,
     );
@@ -262,34 +267,17 @@ export class AutoReplyPlugin implements IPlugin {
       return { continue: true };
     }
 
+    // Mensagens fromMe chegam pelo hook `message:sent` (onOutgoing), não aqui.
+    if (message.fromMe) {
+      return { continue: true };
+    }
+
     const chatId = message.chatId ?? '';
-    // Only individual 1:1 chats matter for auto-reply (and for handoff). `isGroup` doesn't catch
+    // Only individual 1:1 chats matter for auto-reply. `isGroup` doesn't catch
     // channels/newsletters/broadcasts, so gate on the chat JID suffix.
     const isIndividual = /@(c\.us|s\.whatsapp\.net|lid)$/.test(chatId);
     const sessionId = ctx.sessionId;
     const key = this.historyKey(sessionId, chatId);
-
-    // ── HANDOFF HUMANO ──────────────────────────────────────────────────────
-    // Uma mensagem fromMe que a IA NÃO enviou = um humano respondeu manualmente no WhatsApp.
-    // Pausamos a IA nessa conversa para nunca falar por cima do humano. Vale em qualquer sessão.
-    if (message.fromMe) {
-      if (isIndividual) {
-        const body = normText(message.body ?? '');
-        const recents = this.aiSentRecent.get(key) ?? [];
-        const idx = recents.findIndex(r => r.text === body && Date.now() - r.at < AI_ECHO_WINDOW_MS);
-        if (idx >= 0) {
-          recents.splice(idx, 1); // é o eco da própria IA — ignora
-          if (recents.length === 0) this.aiSentRecent.delete(key);
-        } else {
-          // Humano assumiu: silencia a IA e cancela qualquer resposta pendente nessa conversa.
-          this.humanPausedUntil.set(key, Date.now() + HANDOFF_PAUSE_MS());
-          const pending = this.bursts.get(key);
-          if (pending) { clearTimeout(pending.timer); this.bursts.delete(key); }
-          context.logger.log('Auto-reply pausado (humano assumiu a conversa)', { sessionId, chatId });
-        }
-      }
-      return { continue: true };
-    }
 
     if (message.isGroup || !isIndividual) {
       return { continue: true };
@@ -323,6 +311,38 @@ export class AutoReplyPlugin implements IPlugin {
     }
 
     // Keep the inbound message in history + webhooks + ws (do not swallow).
+    return { continue: true };
+  }
+
+  /**
+   * Hook `message:sent` — toda mensagem fromMe da conta (inclusive composta no celular/linked device).
+   * É AQUI que detectamos o handoff humano: uma mensagem fromMe que a IA não enviou = um humano
+   * respondeu manualmente → pausa a IA nessa conversa. (As respostas da própria IA também passam por
+   * aqui, mas são reconhecidas pelo eco em aiSentRecent e ignoradas.)
+   */
+  private onOutgoing(context: PluginContext, ctx: HookContext<IncomingMessage>): HookResult {
+    const message = ctx.data;
+    if (ctx.source !== 'Engine' || !ctx.sessionId || !message.fromMe) {
+      return { continue: true };
+    }
+    const chatId = message.chatId ?? '';
+    if (!/@(c\.us|s\.whatsapp\.net|lid)$/.test(chatId)) {
+      return { continue: true }; // só conversas 1:1
+    }
+    const key = this.historyKey(ctx.sessionId, chatId);
+    const body = normText(message.body ?? '');
+    const recents = this.aiSentRecent.get(key) ?? [];
+    const idx = recents.findIndex(r => r.text === body && Date.now() - r.at < AI_ECHO_WINDOW_MS);
+    if (idx >= 0) {
+      recents.splice(idx, 1); // é o eco da própria IA — ignora
+      if (recents.length === 0) this.aiSentRecent.delete(key);
+    } else {
+      // Humano assumiu: silencia a IA e cancela qualquer resposta pendente nessa conversa.
+      this.humanPausedUntil.set(key, Date.now() + HANDOFF_PAUSE_MS());
+      const pending = this.bursts.get(key);
+      if (pending) { clearTimeout(pending.timer); this.bursts.delete(key); }
+      context.logger.log('Auto-reply pausado (humano assumiu a conversa)', { sessionId: ctx.sessionId, chatId });
+    }
     return { continue: true };
   }
 
