@@ -7,6 +7,10 @@ import { Contact } from './entities/contact.entity';
 export class ContactsService {
   constructor(@InjectRepository(Contact, 'data') private readonly repo: Repository<Contact>) {}
 
+  findByPhone(sessionId: string, phone: string): Promise<Contact | null> {
+    return this.repo.findOne({ where: { sessionId, phone } });
+  }
+
   async upsert(sessionId: string, phone: string, patch: Partial<Contact>): Promise<Contact> {
     let c = await this.repo.findOne({ where: { sessionId, phone } });
     if (!c) {
