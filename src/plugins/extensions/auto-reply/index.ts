@@ -121,6 +121,9 @@ export class AutoReplyPlugin implements IPlugin {
   // Textos enviados recentemente pela própria IA, por conversa — usados para reconhecer o "eco"
   // fromMe da IA e NÃO confundir com um humano respondendo manualmente.
   private readonly aiSentRecent = new Map<string, { text: string; at: number }[]>();
+  // Conversas que a IA está de fato atendendo (key -> timestamp do último envio da IA). O handoff só
+  // pausa conversas AQUI — uma mensagem fromMe num chat que a IA nunca tocou é uso normal, não takeover.
+  private readonly aiEngaged = new Map<string, number>();
   private cleanupTimer?: ReturnType<typeof setInterval>;
 
   constructor(private readonly resolveSession?: SessionResolver) {}
@@ -131,6 +134,7 @@ export class AutoReplyPlugin implements IPlugin {
     const list = (this.aiSentRecent.get(key) ?? []).filter(r => now - r.at < AI_ECHO_WINDOW_MS);
     list.push({ text: normText(text), at: now });
     this.aiSentRecent.set(key, list);
+    this.aiEngaged.set(key, now); // a IA está atendendo esta conversa
   }
 
   /** Remove pausas expiradas e ecos antigos — evita crescimento ilimitado dos mapas. */
@@ -143,6 +147,9 @@ export class AutoReplyPlugin implements IPlugin {
       const fresh = list.filter(r => now - r.at < AI_ECHO_WINDOW_MS);
       if (fresh.length) this.aiSentRecent.set(k, fresh);
       else this.aiSentRecent.delete(k);
+    }
+    for (const [k, at] of this.aiEngaged) {
+      if (now - at > 30 * 60_000) this.aiEngaged.delete(k);
     }
   }
 
@@ -172,6 +179,7 @@ export class AutoReplyPlugin implements IPlugin {
     this.bursts.clear();
     this.humanPausedUntil.clear();
     this.aiSentRecent.clear();
+    this.aiEngaged.clear();
     context.logger.log('AI auto-reply disabled — pending burst timers cleared');
     return Promise.resolve();
   }
@@ -288,6 +296,12 @@ export class AutoReplyPlugin implements IPlugin {
       return { continue: true };
     }
 
+    // Não responde a histórico sincronizado no connect: ignora mensagens claramente antigas (>2 min).
+    // (Se não houver timestamp, prossegue — mensagens ao vivo trazem timestamp.)
+    if (message.timestamp && Date.now() - message.timestamp * 1000 > 120_000) {
+      return { continue: true };
+    }
+
     // Se um humano está conduzindo esta conversa, a IA fica em silêncio.
     if (Date.now() < (this.humanPausedUntil.get(key) ?? 0)) {
       return { continue: true };
@@ -329,6 +343,13 @@ export class AutoReplyPlugin implements IPlugin {
     if (!/@(c\.us|s\.whatsapp\.net|lid)$/.test(chatId)) {
       return { continue: true }; // só conversas 1:1
     }
+    // CRÍTICO: só um envio RECENTE ao vivo é handoff. No connect, o Baileys sincroniza o histórico
+    // de mensagens enviadas (fromMe) — sem este guard, cada mensagem antiga pausaria a IA em todas
+    // as conversas. Mensagens sem timestamp ou antigas (>2 min) são ignoradas (não são handoff vivo).
+    const tsMs = message.timestamp ? message.timestamp * 1000 : 0;
+    if (!tsMs || Date.now() - tsMs > 120_000) {
+      return { continue: true };
+    }
     const key = this.historyKey(ctx.sessionId, chatId);
     const body = normText(message.body ?? '');
     const recents = this.aiSentRecent.get(key) ?? [];
@@ -336,13 +357,21 @@ export class AutoReplyPlugin implements IPlugin {
     if (idx >= 0) {
       recents.splice(idx, 1); // é o eco da própria IA — ignora
       if (recents.length === 0) this.aiSentRecent.delete(key);
-    } else {
-      // Humano assumiu: silencia a IA e cancela qualquer resposta pendente nessa conversa.
-      this.humanPausedUntil.set(key, Date.now() + HANDOFF_PAUSE_MS());
-      const pending = this.bursts.get(key);
-      if (pending) { clearTimeout(pending.timer); this.bursts.delete(key); }
-      context.logger.log('Auto-reply pausado (humano assumiu a conversa)', { sessionId: ctx.sessionId, chatId });
+      return { continue: true };
     }
+
+    // Não é eco da IA. Só é "handoff" se a IA estava de fato atendendo esta conversa (enviou algo nos
+    // últimos 30 min). Caso contrário é uso normal / histórico sincronizado — nada a pausar.
+    const engagedAt = this.aiEngaged.get(key) ?? 0;
+    if (Date.now() - engagedAt > 30 * 60_000) {
+      return { continue: true };
+    }
+
+    // Humano assumiu uma conversa que a IA atendia: silencia a IA e cancela qualquer resposta pendente.
+    this.humanPausedUntil.set(key, Date.now() + HANDOFF_PAUSE_MS());
+    const pending = this.bursts.get(key);
+    if (pending) { clearTimeout(pending.timer); this.bursts.delete(key); }
+    context.logger.log('Auto-reply pausado (humano assumiu a conversa)', { sessionId: ctx.sessionId, chatId });
     return { continue: true };
   }
 
