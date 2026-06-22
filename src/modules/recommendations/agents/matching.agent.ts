@@ -49,8 +49,9 @@ Selecione os ${topN} produtos mais relevantes. Score de relevância: 0 a 100.`;
         url: this.ollamaUrl,
         timeoutMs: this.timeoutMs,
       });
-      const parsed = JSON.parse(content || '{"matches":[]}') as { matches: ProductMatch[] };
-      return parsed.matches.slice(0, topN);
+      const parsed = JSON.parse(content || '{"matches":[]}') as { matches?: ProductMatch[] };
+      const matches = Array.isArray(parsed?.matches) ? parsed.matches : [];
+      return matches.slice(0, topN);
     } catch (err) {
       this.logger.warn('MatchingAgent error', err);
       // Fallback: return first N products

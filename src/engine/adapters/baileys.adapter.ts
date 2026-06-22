@@ -315,30 +315,48 @@ export class BaileysAdapter implements IWhatsAppEngine {
       // Do NOT fire onDisconnected here; this is a transient drop, not a terminal disconnect.
       // connect() calls setStatus(INITIALIZING) which fires onStateChanged — that is the correct signal.
       this.logger.log('Baileys connection dropped; reconnecting', { statusCode });
-
-      // I4: capped exponential backoff with in-flight timer guard.
-      if (this.reconnectAttempts >= BaileysAdapter.MAX_RECONNECT_ATTEMPTS) {
-        this.setStatus(EngineStatus.FAILED);
-        this.callbacks.onError?.(`reconnect attempts exhausted (${this.reconnectAttempts})`);
-        return;
-      }
-      this.reconnectAttempts += 1;
-      const delay = Math.min(30_000, 1_000 * 2 ** (this.reconnectAttempts - 1));
-      // Guard: if a timer is already pending, don't stack another one.
-      if (this.reconnectTimer) {
-        return;
-      }
-      this.reconnectTimer = setTimeout(() => {
-        this.reconnectTimer = undefined;
-        if (this.intentionalClose) {
-          return; // stopped while waiting — abort
-        }
-        void this.connect().catch(err => {
-          this.setStatus(EngineStatus.FAILED);
-          this.callbacks.onError?.(err instanceof Error ? err.message : String(err));
-        });
-      }, delay);
+      this.scheduleReconnect();
     }
+  }
+
+  /**
+   * I4: capped exponential backoff reconnect.
+   * The pending-timer guard and the MAX check run BEFORE the counter is incremented, so a burst of
+   * `connection: 'close'` updates arriving while a timer is already pending can't inflate the counter
+   * and trip MAX prematurely — the counter only advances when a timer is genuinely scheduled.
+   */
+  private scheduleReconnect(): void {
+    if (this.intentionalClose) {
+      return;
+    }
+    // A timer is already pending — don't stack another one or bump the counter.
+    if (this.reconnectTimer) {
+      return;
+    }
+    if (this.reconnectAttempts >= BaileysAdapter.MAX_RECONNECT_ATTEMPTS) {
+      this.setStatus(EngineStatus.FAILED);
+      this.callbacks.onError?.(`reconnect attempts exhausted (${this.reconnectAttempts})`);
+      return;
+    }
+    this.reconnectAttempts += 1;
+    const delay = Math.min(30_000, 1_000 * 2 ** (this.reconnectAttempts - 1));
+    this.reconnectTimer = setTimeout(() => {
+      this.reconnectTimer = undefined;
+      if (this.intentionalClose) {
+        return; // stopped while waiting — abort
+      }
+      // A previous connect() is still in flight: connect() would silently short-circuit and the
+      // reconnect would be dropped with no follow-up. Re-arm instead (without consuming an attempt).
+      if (this.connecting) {
+        this.reconnectAttempts -= 1;
+        this.scheduleReconnect();
+        return;
+      }
+      void this.connect().catch(err => {
+        this.setStatus(EngineStatus.FAILED);
+        this.callbacks.onError?.(err instanceof Error ? err.message : String(err));
+      });
+    }, delay);
   }
 
   /** Render the raw Baileys QR ref to a PNG data URL, then publish it (mirrors the whatsapp-web.js engine). */

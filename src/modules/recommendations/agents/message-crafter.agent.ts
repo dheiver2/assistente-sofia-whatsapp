@@ -50,10 +50,15 @@ Necessidade identificada: ${analysis.likelyNeeds}`;
         url: this.ollamaUrl,
         timeoutMs: this.timeoutMs,
       });
-      const parsed = JSON.parse(content || '{"message":""}') as { message: string };
-      message = parsed.message;
+      const parsed = JSON.parse(content || '{"message":""}') as { message?: unknown };
+      message = typeof parsed?.message === 'string' ? parsed.message.trim() : '';
     } catch (err) {
       this.logger.warn('MessageCrafterAgent error', err);
+    }
+
+    // Guard against a parsed-but-empty/undefined message (valid JSON without a usable `message`):
+    // never persist or send a blank WhatsApp message — fall back to a templated one.
+    if (!message) {
       message = `Olá ${profile.name ?? ''}! Pensando no seu perfil, acredito que ${product.name} pode ser exatamente o que você precisa. Posso te contar mais?`;
     }
 

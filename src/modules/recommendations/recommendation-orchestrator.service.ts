@@ -30,13 +30,13 @@ export interface OrchestrateResult {
     reason: string;
   }[];
   customerInsight: string;
+  interests: string[];
+  intent: string;
 }
 
 @Injectable()
 export class RecommendationOrchestrator {
   private readonly logger = new Logger(RecommendationOrchestrator.name);
-  private lastInterests: string[] = [];
-  private lastIntent = '';
 
   constructor(
     @InjectRepository(Product, 'data') private readonly products: Repository<Product>,
@@ -71,23 +71,24 @@ export class RecommendationOrchestrator {
 
     if (catalog.length === 0) {
       this.logger.warn('[Orchestrator] No active products in catalog');
-      return { phone, recommendations: [], customerInsight: 'Catálogo vazio' };
+      return { phone, recommendations: [], customerInsight: 'Catálogo vazio', interests: [], intent: '' };
     }
 
     // ── Stage 2: Customer analysis ─────────────────────────────────────────
     this.logger.log(`[Orchestrator] Stage 2 — analyzing customer profile`);
     const analysis = await this.analysisAgent.analyze(profile, ai.knowledge);
-    this.lastInterests = analysis.interests ?? [];
-    this.lastIntent = analysis.likelyNeeds ?? '';
 
     // ── Stage 3: Product matching ──────────────────────────────────────────
     this.logger.log(`[Orchestrator] Stage 3 — matching products`);
     const matches = await this.matchingAgent.match(analysis, catalog, topN);
 
-    // Resolve matched products from catalog
-    const matchedProducts = matches
-      .map(m => catalog.find(p => p.id === m.productId))
-      .filter((p): p is Product => !!p);
+    // Resolve matched products from catalog, keeping each product paired with its
+    // originating match so relevanceScore/reason never drift when a productId the
+    // LLM returned isn't found in the catalog (which drops elements and shifts indices).
+    const pairs = matches
+      .map(m => ({ product: catalog.find(p => p.id === m.productId), match: m }))
+      .filter((pair): pair is { product: Product; match: typeof matches[number] } => !!pair.product);
+    const matchedProducts = pairs.map(pair => pair.product);
 
     // ── Stage 4: Parallel message crafting ────────────────────────────────
     this.logger.log(`[Orchestrator] Stage 4 — crafting ${matchedProducts.length} messages in parallel`);
@@ -95,7 +96,7 @@ export class RecommendationOrchestrator {
       matchedProducts,
       profile,
       analysis,
-      matches.map(m => ({ productId: m.productId, reason: m.reason })),
+      pairs.map(pair => ({ productId: pair.match.productId, reason: pair.match.reason })),
       ai.persona,
     );
 
@@ -106,13 +107,13 @@ export class RecommendationOrchestrator {
           sessionId,
           phone,
           productId: c.productId,
-          productName: matchedProducts[i]?.name ?? '',
+          productName: pairs[i]?.product.name ?? '',
           message: c.message,
           mediaUrl: c.mediaUrl,
           mediaType: c.mediaType,
           status: 'pending',
           customerInsight: analysis.summary,
-          relevanceScore: matches[i]?.relevanceScore ?? 50,
+          relevanceScore: pairs[i]?.match.relevanceScore ?? 50,
           campaignId: campaignId ?? null,
         }))
       )
@@ -123,6 +124,8 @@ export class RecommendationOrchestrator {
     return {
       phone,
       customerInsight: analysis.summary,
+      interests: analysis.interests ?? [],
+      intent: analysis.likelyNeeds ?? '',
       recommendations: saved.map((r, i) => ({
         productId: r.productId,
         productName: r.productName,
@@ -130,7 +133,7 @@ export class RecommendationOrchestrator {
         mediaUrl: r.mediaUrl,
         mediaType: r.mediaType,
         relevanceScore: r.relevanceScore,
-        reason: matches[i]?.reason ?? '',
+        reason: pairs[i]?.match.reason ?? '',
       })),
     };
   }
@@ -144,7 +147,7 @@ export class RecommendationOrchestrator {
         results.push(await this.orchestrate({ sessionId, phone, campaignId }));
       } catch (err) {
         this.logger.error(`Batch orchestration failed for ${phone}`, err);
-        results.push({ phone, recommendations: [], customerInsight: 'Erro' });
+        results.push({ phone, recommendations: [], customerInsight: 'Erro', interests: [], intent: '' });
       }
     }
     return results;
@@ -190,8 +193,8 @@ export class RecommendationOrchestrator {
     return {
       customerInsight: {
         summary: result.customerInsight,
-        interests: this.lastInterests,
-        intent: this.lastIntent,
+        interests: result.interests,
+        intent: result.intent,
       },
       recommendations: saved.map(r => this.mapRec(r)),
     };

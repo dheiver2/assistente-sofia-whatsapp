@@ -181,6 +181,17 @@ export class BulkMessageService implements OnApplicationBootstrap {
     const batch = await this.batchRepository.findOne({ where: { id: batchDbId } });
     if (!batch) return;
 
+    // A cancel may have landed before processing started (createBatch kicks this off async).
+    // Honour it instead of clobbering the signal with `true` and sending a window of messages.
+    if (batch.status === BatchStatus.CANCELLED || batch.status === BatchStatus.COMPLETED) {
+      this.logger.log(`Batch ${batch.batchId} already ${batch.status} before processing; skipping`);
+      return;
+    }
+    if (this.processingBatches.get(batch.id) === false) {
+      this.logger.log(`Batch ${batch.batchId} cancellation signalled before processing; skipping`);
+      return;
+    }
+
     this.processingBatches.set(batch.id, true);
 
     // Update status to processing

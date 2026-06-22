@@ -40,7 +40,16 @@ Atributos: ${JSON.stringify(profile.attributes, null, 2)}`;
         url: this.ollamaUrl,
         timeoutMs: this.timeoutMs,
       });
-      return JSON.parse(content || '{}') as CustomerAnalysis;
+      const parsed = JSON.parse(content || '{}') as Partial<CustomerAnalysis>;
+      // Normalise fields the LLM may omit so downstream consumers (e.g. MatchingAgent's
+      // analysis.interests.join) never dereference undefined.
+      return {
+        interests: Array.isArray(parsed.interests) ? parsed.interests : [],
+        buyingPatterns: typeof parsed.buyingPatterns === 'string' ? parsed.buyingPatterns : '',
+        likelyNeeds: typeof parsed.likelyNeeds === 'string' ? parsed.likelyNeeds : '',
+        preferredChannels: Array.isArray(parsed.preferredChannels) ? parsed.preferredChannels : ['whatsapp'],
+        summary: typeof parsed.summary === 'string' ? parsed.summary : '',
+      };
     } catch (err) {
       this.logger.warn('AnalysisAgent error', err);
       return { interests: profile.tags, buyingPatterns: '', likelyNeeds: '', preferredChannels: ['whatsapp'], summary: profile.notes ?? '' };

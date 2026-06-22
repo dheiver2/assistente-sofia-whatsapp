@@ -73,7 +73,16 @@ function isWithinBusinessHours(bh: NonNullable<SessionAi['businessHours']>): boo
   if (!rule) return false; // closed today
   const [sh, sm] = rule.start.split(':').map(Number);
   const [eh, em] = rule.end.split(':').map(Number);
-  return currentMinutes >= sh * 60 + sm && currentMinutes < eh * 60 + em;
+  const startMinutes = sh * 60 + sm;
+  const endMinutes = eh * 60 + em;
+  // Malformed "HH:MM" → NaN comparisons silently treat the business as closed all day. Fail open
+  // (treat as within hours) so a bad config doesn't silence the assistant without any signal.
+  if (Number.isNaN(startMinutes) || Number.isNaN(endMinutes)) return true;
+  // Overnight range (e.g. 18:00–02:00): the window wraps past midnight.
+  if (endMinutes <= startMinutes) {
+    return currentMinutes >= startMinutes || currentMinutes < endMinutes;
+  }
+  return currentMinutes >= startMinutes && currentMinutes < endMinutes;
 }
 
 interface ResolvedProfile {
@@ -105,6 +114,16 @@ export class AutoReplyPlugin implements IPlugin {
     context.logger.log(
       `AI auto-reply enabled (model=${OLLAMA_MODEL}, memória=${HISTORY_TURNS} turnos, personas=${PERSONAS_FILE})`,
     );
+    return Promise.resolve();
+  }
+
+  /** Clear pending burst timers so a disable/reload doesn't leak timers or fire against a torn-down context. */
+  onDisable(context: PluginContext): Promise<void> {
+    for (const burst of this.bursts.values()) {
+      clearTimeout(burst.timer);
+    }
+    this.bursts.clear();
+    context.logger.log('AI auto-reply disabled — pending burst timers cleared');
     return Promise.resolve();
   }
 

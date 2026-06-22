@@ -75,6 +75,11 @@ const SOCKET_URL = import.meta.env.VITE_WS_URL || window.location.origin;
 
 export function useWebSocket(events: WebSocketEvents = {}) {
   const socketRef = useRef<Socket | null>(null);
+  // Consumers typically pass a fresh `events` object literal every render. Keeping the latest
+  // callbacks in a ref lets the single envelope handler stay attached for the socket's whole
+  // lifetime instead of being torn down/reattached on each render (which drops in-flight events).
+  const eventsRef = useRef<WebSocketEvents>(events);
+  eventsRef.current = events;
   const [isConnected, setIsConnected] = useState(false);
   // True once Socket.IO exhausts its reconnection attempts and permanently gives up — lets the
   // UI show a "connection lost" indicator + a manual retry instead of silently going stale.
@@ -166,16 +171,19 @@ export function useWebSocket(events: WebSocketEvents = {}) {
     };
   }, [connect]);
 
-  // Register the single envelope handler and fan out to the typed callbacks.
+  // Register the single envelope handler once the socket exists and fan out to the typed
+  // callbacks via the ref. Gated on `isConnected` so the handler is (re)attached whenever a
+  // socket is created — including the case where the first connect was skipped (e.g. API key
+  // arrived late) and the socket only comes up later.
   useEffect(() => {
-    if (!socketRef.current) return;
-
     const socket = socketRef.current;
+    if (!socket) return;
 
     const handleIncomingMessage = (msg: ServerEventEnvelope) => {
       if (!msg || msg.type !== 'event' || !msg.payload) return;
 
       const { event, sessionId, data } = msg.payload;
+      const events = eventsRef.current;
 
       switch (event) {
         case 'session.status':
@@ -230,7 +238,7 @@ export function useWebSocket(events: WebSocketEvents = {}) {
     return () => {
       socket.off('message', handleIncomingMessage);
     };
-  }, [events]);
+  }, [isConnected]);
 
   return { isConnected, connectionFailed, reconnect, subscribe, unsubscribe };
 }
