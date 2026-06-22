@@ -23,14 +23,17 @@ import { HookContext, HookResult } from '../../../core/hooks';
 import { IncomingMessage } from '../../../engine/interfaces/whatsapp-engine.interface';
 import { ollamaChat } from '../../../common/ollama/ollama.client';
 
-const OLLAMA_URL = process.env.OLLAMA_URL ?? 'http://host.docker.internal:11434';
-const OLLAMA_MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:7b-instruct';
-const TIMEOUT_MS = Number(process.env.OLLAMA_TIMEOUT_MS ?? 30000);
-const HISTORY_TURNS = Number(process.env.AI_HISTORY_TURNS ?? 8);
+// IMPORTANT: read env LAZILY (functions, not module-level constants). This plugin module is imported
+// before main.ts runs dotenv.config(), so evaluating process.env at import time would capture the
+// Docker default 'host.docker.internal' instead of the .env value, breaking Ollama on host installs.
+const OLLAMA_URL = () => process.env.OLLAMA_URL ?? 'http://host.docker.internal:11434';
+const OLLAMA_MODEL = () => process.env.OLLAMA_MODEL ?? 'qwen2.5:7b-instruct';
+const TIMEOUT_MS = () => Number(process.env.OLLAMA_TIMEOUT_MS ?? 30000);
+const HISTORY_TURNS = () => Number(process.env.AI_HISTORY_TURNS ?? 8);
 // Janela para agrupar mensagens em rajada (responde uma vez quando o cliente para de digitar).
-const DEBOUNCE_MS = Number(process.env.AI_DEBOUNCE_MS ?? 3500);
-const PERSONAS_FILE = process.env.AI_PERSONAS_FILE ?? '/app/data/personas.json';
-const DEFAULT_PROMPT =
+const DEBOUNCE_MS = () => Number(process.env.AI_DEBOUNCE_MS ?? 3500);
+const PERSONAS_FILE = () => process.env.AI_PERSONAS_FILE ?? '/app/data/personas.json';
+const DEFAULT_PROMPT = () =>
   process.env.AI_SYSTEM_PROMPT ??
   'Você é uma assistente de atendimento via WhatsApp, simpática e prestativa. ' +
     'Responda de forma curta, clara e natural, em português brasileiro. Não use markdown.';
@@ -112,7 +115,7 @@ export class AutoReplyPlugin implements IPlugin {
       Promise.resolve(this.onMessage(context, ctx as HookContext<IncomingMessage>)),
     );
     context.logger.log(
-      `AI auto-reply enabled (model=${OLLAMA_MODEL}, memória=${HISTORY_TURNS} turnos, personas=${PERSONAS_FILE})`,
+      `AI auto-reply enabled (model=${OLLAMA_MODEL()}, memória=${HISTORY_TURNS()} turnos, personas=${PERSONAS_FILE()})`,
     );
     return Promise.resolve();
   }
@@ -130,9 +133,10 @@ export class AutoReplyPlugin implements IPlugin {
   /** Lê o personas.json (fallback) com cache por mtime. */
   private loadPersonas(): PersonasFile {
     try {
-      const stat = fs.statSync(PERSONAS_FILE);
+      const file = PERSONAS_FILE();
+      const stat = fs.statSync(file);
       if (!this.personasCache || this.personasCache.mtimeMs !== stat.mtimeMs) {
-        const parsed = JSON.parse(fs.readFileSync(PERSONAS_FILE, 'utf-8')) as PersonasFile;
+        const parsed = JSON.parse(fs.readFileSync(file, 'utf-8')) as PersonasFile;
         this.personasCache = { mtimeMs: stat.mtimeMs, data: parsed ?? {} };
       }
       return this.personasCache.data;
@@ -158,14 +162,14 @@ export class AutoReplyPlugin implements IPlugin {
     const personas = this.loadPersonas();
     const fromFile = personas.sessions?.[sessionId] ?? (name ? personas.sessions?.[name] : undefined);
 
-    let systemPrompt = ai?.persona?.trim() || fromFile || personas.default || DEFAULT_PROMPT;
+    let systemPrompt = ai?.persona?.trim() || fromFile || personas.default || DEFAULT_PROMPT();
     if (ai?.knowledge?.trim()) {
       systemPrompt += `\n\nInformações e conhecimento da empresa (use para responder com precisão; não invente o que não estiver aqui):\n${ai.knowledge.trim()}`;
     }
 
     return {
       systemPrompt,
-      model: ai?.model?.trim() || OLLAMA_MODEL,
+      model: ai?.model?.trim() || OLLAMA_MODEL(),
       greeting: ai?.greeting?.trim() || undefined,
       enabled: ai?.enabled !== false, // default: ligado
       ai,
@@ -183,7 +187,7 @@ export class AutoReplyPlugin implements IPlugin {
   }
 
   private async saveHistory(context: PluginContext, key: string, history: ChatTurn[]): Promise<void> {
-    await context.storage.set(key, history.slice(-HISTORY_TURNS * 2));
+    await context.storage.set(key, history.slice(-HISTORY_TURNS() * 2));
   }
 
   private async generate(model: string, systemPrompt: string, history: ChatTurn[], userText: string): Promise<string> {
@@ -197,8 +201,8 @@ export class AutoReplyPlugin implements IPlugin {
           messages: [{ role: 'system', content: systemPrompt }, ...history, { role: 'user', content: userText }],
           temperature: 0.7,
           numPredict: 140,
-          url: OLLAMA_URL,
-          timeoutMs: TIMEOUT_MS,
+          url: OLLAMA_URL(),
+          timeoutMs: TIMEOUT_MS(),
         })).trim();
         if (!text) throw new Error('empty AI response');
         return text;
@@ -240,12 +244,12 @@ export class AutoReplyPlugin implements IPlugin {
       clearTimeout(existing.timer);
       existing.texts.push(body);
       existing.lastMessageId = message.id;
-      existing.timer = setTimeout(() => void this.flush(context, sessionId, chatId, key), DEBOUNCE_MS);
+      existing.timer = setTimeout(() => void this.flush(context, sessionId, chatId, key), DEBOUNCE_MS());
     } else {
       const burst: PendingBurst = {
         texts: [body],
         lastMessageId: message.id,
-        timer: setTimeout(() => void this.flush(context, sessionId, chatId, key), DEBOUNCE_MS),
+        timer: setTimeout(() => void this.flush(context, sessionId, chatId, key), DEBOUNCE_MS()),
       };
       this.bursts.set(key, burst);
     }
