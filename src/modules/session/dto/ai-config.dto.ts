@@ -76,3 +76,20 @@ export class AiConfigDto {
 }
 
 export type AiConfig = AiConfigDto;
+
+/**
+ * Configuração padrão do bot — toda sessão nasce com isto, funcional na hora.
+ * A pessoa abre a aba IA e personaliza (persona, conhecimento, saudação, horário, modelo).
+ */
+export const DEFAULT_AI_CONFIG: AiConfig = {
+  enabled: true,
+  persona:
+    'Você é um assistente virtual de atendimento via WhatsApp, simpático, claro e prestativo. ' +
+    'Responda em português brasileiro, em mensagens curtas e naturais (1 a 4 frases), sem markdown. ' +
+    'Cumprimente e se apresente apenas no primeiro contato; depois vá direto ao ponto, sem repetir saudações. ' +
+    'Entenda a necessidade da pessoa e ajude com o que souber. Quando não tiver a informação, seja honesto: ' +
+    'diga que vai verificar e retorna — nunca invente preços, prazos ou detalhes que você não conhece.',
+  knowledge: '',
+  greeting: 'Olá! 👋 Sou o assistente virtual de atendimento. Como posso te ajudar hoje?',
+  model: '',
+};

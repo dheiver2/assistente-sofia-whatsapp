@@ -11,7 +11,7 @@ import { InjectRepository, InjectDataSource } from '@nestjs/typeorm';
 import { Repository, In, Not, IsNull, DataSource, FindManyOptions } from 'typeorm';
 import { Session, SessionStatus } from './entities/session.entity';
 import { Message, MessageDirection, MessageStatus } from '../message/entities/message.entity';
-import { CreateSessionDto, AiConfig } from './dto';
+import { CreateSessionDto, AiConfig, DEFAULT_AI_CONFIG } from './dto';
 import { EngineFactory } from '../../engine/engine.factory';
 import {
   IWhatsAppEngine,
@@ -256,9 +256,16 @@ export class SessionService implements OnModuleDestroy, OnModuleInit, OnApplicat
       throw new ConflictException(`Session with name '${dto.name}' already exists`);
     }
 
+    // Toda sessão nasce com uma configuração default do bot (funcional na hora). A pessoa
+    // personaliza depois na aba IA. Só aplica o default se a criação não trouxer um ai próprio.
+    const config: Record<string, unknown> = dto.config ? { ...dto.config } : {};
+    if (config.ai === undefined) {
+      config.ai = { ...DEFAULT_AI_CONFIG };
+    }
+
     const session = this.sessionRepository.create({
       name: dto.name,
-      config: dto.config || {},
+      config,
       proxyUrl: dto.proxyUrl || null,
       proxyType: dto.proxyType || null,
       status: SessionStatus.CREATED,
