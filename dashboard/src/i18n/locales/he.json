@@ -47,7 +47,9 @@
     "logout": "יציאה",
     "refresh": "רענון",
     "errorGeneric": "אירעה שגיאה",
-    "unknownError": "שגיאה לא ידועה"
+    "unknownError": "שגיאה לא ידועה",
+    "copiedToClipboard": "Copied to clipboard",
+    "copyFailed": "Failed to copy"
   },
   "theme": {
     "light": "בהיר",
@@ -133,7 +135,7 @@
     "version": "v{{version}} · {{date}}"
   },
   "home": "בית",
-    "dashboard": {
+  "dashboard": {
     "title": "דאשבורד",
     "subtitle": "סקירה כללית של ה-Sessions והפעילות שלך ב-WhatsApp",
     "stats": {
@@ -424,6 +426,14 @@
       "copy": "העתקה",
       "revoke": "ביטול",
       "delete": "מחיקה"
+    },
+    "toast": {
+      "createSuccess": "API key created",
+      "createError": "Failed to create API key",
+      "revokeSuccess": "API key revoked",
+      "revokeError": "Failed to revoke API key",
+      "deleteSuccess": "API key deleted",
+      "deleteError": "Failed to delete API key"
     }
   },
   "logs": {
@@ -557,6 +567,7 @@
       "completed": "הושלמו",
       "failed": "נכשלו",
       "clearFailed": "ניקוי משימות שנכשלו",
+      "clearFailedUnavailable": "Clearing failed jobs is not yet available",
       "viewBullMq": "פתיחת Bull MQ Dashboard",
       "disabledTitle": "Redis מושבת",
       "disabledDesc": "יש להפעיל את Redis למטמון, אחסון Sessions ותורי הודעות BullMQ.",

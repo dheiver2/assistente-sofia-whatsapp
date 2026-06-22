@@ -47,7 +47,9 @@
     "logout": "Logout",
     "refresh": "Refresh",
     "errorGeneric": "An error occurred",
-    "unknownError": "Unknown error"
+    "unknownError": "Unknown error",
+    "copiedToClipboard": "Copied to clipboard",
+    "copyFailed": "Failed to copy"
   },
   "theme": {
     "light": "Light",
@@ -423,6 +425,14 @@
       "copy": "Copy",
       "revoke": "Revoke",
       "delete": "Delete"
+    },
+    "toast": {
+      "createSuccess": "API key created",
+      "createError": "Failed to create API key",
+      "revokeSuccess": "API key revoked",
+      "revokeError": "Failed to revoke API key",
+      "deleteSuccess": "API key deleted",
+      "deleteError": "Failed to delete API key"
     }
   },
   "logs": {
@@ -556,6 +566,7 @@
       "completed": "Completed",
       "failed": "Failed",
       "clearFailed": "Clear Failed Jobs",
+      "clearFailedUnavailable": "Clearing failed jobs is not yet available",
       "viewBullMq": "View Bull MQ Dashboard",
       "disabledTitle": "Redis is Disabled",
       "disabledDesc": "Enable Redis for caching, session storage, and BullMQ message queues.",

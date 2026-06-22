@@ -47,7 +47,9 @@
     "logout": "登出",
     "refresh": "重新整理",
     "errorGeneric": "發生錯誤",
-    "unknownError": "未知錯誤"
+    "unknownError": "未知錯誤",
+    "copiedToClipboard": "Copied to clipboard",
+    "copyFailed": "Failed to copy"
   },
   "theme": {
     "light": "淺色",
@@ -133,7 +135,7 @@
     "version": "v{{version}} · {{date}}"
   },
   "home": "主頁",
-    "dashboard": {
+  "dashboard": {
     "title": "控制面板",
     "subtitle": "查看你的 WhatsApp 工作階段及活動概覽",
     "stats": {
@@ -424,6 +426,14 @@
       "copy": "複製",
       "revoke": "撤銷",
       "delete": "刪除"
+    },
+    "toast": {
+      "createSuccess": "API key created",
+      "createError": "Failed to create API key",
+      "revokeSuccess": "API key revoked",
+      "revokeError": "Failed to revoke API key",
+      "deleteSuccess": "API key deleted",
+      "deleteError": "Failed to delete API key"
     }
   },
   "logs": {
@@ -557,6 +567,7 @@
       "completed": "已完成",
       "failed": "失敗",
       "clearFailed": "清除失敗任務",
+      "clearFailedUnavailable": "Clearing failed jobs is not yet available",
       "viewBullMq": "查看 Bull MQ 控制面板",
       "disabledTitle": "Redis 已停用",
       "disabledDesc": "啟用 Redis 以使用快取、工作階段儲存及 BullMQ 訊息佇列。",

@@ -27,6 +27,7 @@ export function Sessions() {
   const [selectedSession, setSelectedSession] = useState<Session | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [killConfirmId, setKillConfirmId] = useState<string | null>(null);
+  const [actionBusy, setActionBusy] = useState<string | null>(null);
   // Envio rápido de mensagem
   const [quickSendSession, setQuickSendSession] = useState<Session | null>(null);
   const [quickSendTo, setQuickSendTo] = useState('');
@@ -234,6 +235,7 @@ export function Sessions() {
       return;
     }
 
+    setActionBusy(id);
     try {
       await sessionApi.start(id);
       setSessions(sessions.map(s => (s.id === id ? { ...s, status: 'connecting' } : s)));
@@ -241,9 +243,12 @@ export function Sessions() {
       handleShowQR(id);
     } catch (err) {
       console.error('Failed to start:', err);
+      toast.error(t('sessions.start.errorTitle', { defaultValue: 'Erro ao iniciar sessão' }), err instanceof Error ? err.message : undefined);
       const fresh = await fetchSessions();
       const current = fresh.find(s => s.id === id);
       if (current?.status !== 'ready') handleShowQR(id);
+    } finally {
+      setActionBusy(null);
     }
   };
 
@@ -261,19 +266,24 @@ export function Sessions() {
       setQrData({ sessionId: id, sessionName, qrCode: qr.qrCode });
     } catch (err) {
       console.error('Failed to get QR:', err);
+      toast.error(t('sessions.qr.errorTitle', { defaultValue: 'Erro ao gerar QR' }), err instanceof Error ? err.message : undefined);
       // Do not clear qrData here — keep the loading modal open so the
       // polling interval (every 5 s) retries until the QR becomes available.
     }
   };
 
   const handleStop = async (id: string) => {
+    setActionBusy(id);
     try {
       await sessionApi.stop(id);
       setSessions(sessions.map(s => (s.id === id ? { ...s, status: 'disconnected' } : s)));
       if (qrData?.sessionId === id) setQrData(null);
     } catch (err) {
       console.error('Failed to stop:', err);
+      toast.error(t('sessions.stop.errorTitle', { defaultValue: 'Erro ao parar sessão' }), err instanceof Error ? err.message : undefined);
       fetchSessions();
+    } finally {
+      setActionBusy(null);
     }
   };
 
@@ -364,10 +374,11 @@ export function Sessions() {
       {error && (
         <div
           style={{
-            background: '#FEE2E2',
+            background: 'color-mix(in srgb, var(--error) 12%, transparent)',
             padding: '1rem',
             borderRadius: '8px',
-            color: '#DC2626',
+            color: 'var(--error)',
+            border: '1px solid color-mix(in srgb, var(--error) 30%, transparent)',
             marginBottom: '1rem',
           }}
         >
@@ -837,18 +848,18 @@ export function Sessions() {
                 )}
                 {canWrite &&
                 (session.status === 'created' || session.status === 'idle' || session.status === 'disconnected') ? (
-                  <button className="btn-action" onClick={() => handleStart(session.id)}>
-                    <Play size={16} />
+                  <button className="btn-action" onClick={() => handleStart(session.id)} disabled={actionBusy === session.id}>
+                    {actionBusy === session.id ? <Loader2 size={16} className="spin" /> : <Play size={16} />}
                     {t('sessions.actions.start')}
                   </button>
                 ) : canWrite && ['ready', 'initializing', 'connecting', 'qr_ready'].includes(session.status) ? (
-                  <button className="btn-action" onClick={() => handleStop(session.id)}>
-                    <Square size={16} />
+                  <button className="btn-action" onClick={() => handleStop(session.id)} disabled={actionBusy === session.id}>
+                    {actionBusy === session.id ? <Loader2 size={16} className="spin" /> : <Square size={16} />}
                     {t('sessions.actions.stop')}
                   </button>
                 ) : canWrite ? (
-                  <button className="btn-action" onClick={() => handleStart(session.id)}>
-                    <RefreshCw size={16} />
+                  <button className="btn-action" onClick={() => handleStart(session.id)} disabled={actionBusy === session.id}>
+                    {actionBusy === session.id ? <Loader2 size={16} className="spin" /> : <RefreshCw size={16} />}
                     {t('sessions.actions.reconnect')}
                   </button>
                 ) : null}

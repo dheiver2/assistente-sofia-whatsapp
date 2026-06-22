@@ -47,7 +47,9 @@
     "logout": "تسجيل الخروج",
     "refresh": "تحديث",
     "errorGeneric": "حدث خطأ",
-    "unknownError": "خطأ غير معروف"
+    "unknownError": "خطأ غير معروف",
+    "copiedToClipboard": "Copied to clipboard",
+    "copyFailed": "Failed to copy"
   },
   "theme": {
     "light": "فاتح",
@@ -133,7 +135,7 @@
     "version": "v{{version}} · {{date}}"
   },
   "home": "الرئيسية",
-    "dashboard": {
+  "dashboard": {
     "title": "لوحة التحكم",
     "subtitle": "نظرة عامة على جلسات واتساب ونشاطك",
     "stats": {
@@ -424,6 +426,14 @@
       "copy": "نسخ",
       "revoke": "إلغاء",
       "delete": "حذف"
+    },
+    "toast": {
+      "createSuccess": "API key created",
+      "createError": "Failed to create API key",
+      "revokeSuccess": "API key revoked",
+      "revokeError": "Failed to revoke API key",
+      "deleteSuccess": "API key deleted",
+      "deleteError": "Failed to delete API key"
     }
   },
   "logs": {
@@ -557,6 +567,7 @@
       "completed": "مكتمل",
       "failed": "فشل",
       "clearFailed": "مسح المهام الفاشلة",
+      "clearFailedUnavailable": "Clearing failed jobs is not yet available",
       "viewBullMq": "عرض لوحة Bull MQ",
       "disabledTitle": "Redis معطّل",
       "disabledDesc": "فعّل Redis للتخزين المؤقت وتخزين الجلسات وقوائم رسائل BullMQ.",

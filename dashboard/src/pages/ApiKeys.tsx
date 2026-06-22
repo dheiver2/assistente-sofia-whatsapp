@@ -25,6 +25,7 @@ import type { ApiKey } from '../services/api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useApiKeysQuery, useCreateApiKeyMutation, useDeleteApiKeyMutation, useRevokeApiKeyMutation } from '../hooks/queries';
 import { PageHeader } from '../components/PageHeader';
+import { useToast } from '../components/Toast';
 import { copyToClipboard } from '../utils/clipboard';
 import './ApiKeys.css';
 
@@ -44,6 +45,7 @@ const columnHelper = createColumnHelper<ApiKey>();
 
 export function ApiKeys() {
   const { t } = useTranslation();
+  const toast = useToast();
   useDocumentTitle(t('apiKeys.title'));
   const { data: apiKeys = [], isLoading: loading, isError: apiKeysError } = useApiKeysQuery();
   const createMutation = useCreateApiKeyMutation();
@@ -73,24 +75,30 @@ export function ApiKeys() {
       const created = await createMutation.mutateAsync({ name: newKey.name, role: newKey.role });
       setCreatedKey(created.apiKey || null);
       setNewKey({ name: '', role: 'operator' });
+      toast.success(t('apiKeys.toast.createSuccess'));
     } catch (err) {
       console.error('Failed to create:', err);
+      toast.error(t('apiKeys.toast.createError'));
     }
   };
 
   const handleRevoke = async (id: string) => {
     try {
       await revokeMutation.mutateAsync(id);
+      toast.success(t('apiKeys.toast.revokeSuccess'));
     } catch (err) {
       console.error('Failed to revoke:', err);
+      toast.error(t('apiKeys.toast.revokeError'));
     }
   };
 
   const handleDelete = async (id: string) => {
     try {
       await deleteMutation.mutateAsync(id);
+      toast.success(t('apiKeys.toast.deleteSuccess'));
     } catch (err) {
       console.error('Failed to delete:', err);
+      toast.error(t('apiKeys.toast.deleteError'));
     }
   };
 
@@ -114,6 +122,9 @@ export function ApiKeys() {
     if (await copyToClipboard(text)) {
       setCopied(id);
       setTimeout(() => setCopied(null), 2000);
+      toast.success(t('common.copiedToClipboard'));
+    } else {
+      toast.error(t('common.copyFailed'));
     }
   };
 
@@ -177,6 +188,7 @@ export function ApiKeys() {
                   className="icon-btn"
                   onClick={() => setConfirmAction({ type: 'revoke', id: apiKey.id, name: apiKey.name })}
                   title={t('apiKeys.actions.revoke')}
+                  aria-label={t('apiKeys.actions.revoke')}
                 >
                   <RefreshCw size={16} />
                 </button>
@@ -185,6 +197,7 @@ export function ApiKeys() {
                 className="icon-btn danger"
                 onClick={() => setConfirmAction({ type: 'delete', id: apiKey.id, name: apiKey.name })}
                 title={t('apiKeys.actions.delete')}
+                aria-label={t('apiKeys.actions.delete')}
               >
                 <Trash2 size={16} />
               </button>
@@ -279,15 +292,16 @@ export function ApiKeys() {
                 </div>
               ) : (
                 <>
-                  <label>{t('common.name')}</label>
+                  <label htmlFor="api-key-name">{t('common.name')}</label>
                   <input
+                    id="api-key-name"
                     type="text"
                     placeholder={t('apiKeys.namePlaceholder')}
                     value={newKey.name}
                     onChange={e => setNewKey({ ...newKey, name: e.target.value })}
                   />
-                  <label>{t('common.role')}</label>
-                  <select value={newKey.role} onChange={e => setNewKey({ ...newKey, role: e.target.value })}>
+                  <label htmlFor="api-key-role">{t('common.role')}</label>
+                  <select id="api-key-role" value={newKey.role} onChange={e => setNewKey({ ...newKey, role: e.target.value })}>
                     {roleNames.map(r => (
                       <option key={r} value={r}>
                         {t(`apiKeys.roles.${r}`)}
@@ -302,8 +316,19 @@ export function ApiKeys() {
                 <button className="btn-secondary" onClick={() => setShowModal(false)}>
                   {t('common.cancel')}
                 </button>
-                <button className="btn-primary" onClick={handleCreate}>
-                  {t('common.create')}
+                <button
+                  className="btn-primary"
+                  onClick={handleCreate}
+                  disabled={createMutation.isPending || !newKey.name.trim()}
+                >
+                  {createMutation.isPending ? (
+                    <>
+                      <Loader2 size={16} className="spin" />
+                      {t('common.create')}
+                    </>
+                  ) : (
+                    t('common.create')
+                  )}
                 </button>
               </div>
             )}

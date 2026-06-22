@@ -760,3 +760,7 @@
   font-size: 2rem;
   margin-bottom: 4px;
 }
+
+.rec-btn .spin {
+  animation: spin 0.8s linear infinite;
+}

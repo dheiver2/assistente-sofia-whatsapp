@@ -436,6 +436,7 @@ export function Infrastructure() {
                 <label>{t('infrastructure.webhook.timeout')}</label>
                 <input
                   type="number"
+                  min={0}
                   value={webhookConfig.timeout}
                   onChange={e => updateWebhookConfig('timeout', parseInt(e.target.value) || 10000)}
                 />
@@ -454,6 +455,7 @@ export function Infrastructure() {
                 <label>{t('infrastructure.webhook.retryDelay')}</label>
                 <input
                   type="number"
+                  min={0}
                   value={webhookConfig.retryDelay}
                   onChange={e => updateWebhookConfig('retryDelay', parseInt(e.target.value) || 5000)}
                 />
@@ -470,6 +472,7 @@ export function Infrastructure() {
                   <label>{t('infrastructure.webhook.window')}</label>
                   <input
                     type="number"
+                    min={1}
                     value={rateLimitConfig.ttl}
                     onChange={e => updateRateLimitConfig('ttl', parseInt(e.target.value) || 60)}
                   />
@@ -478,6 +481,7 @@ export function Infrastructure() {
                   <label>{t('infrastructure.webhook.maxReq')}</label>
                   <input
                     type="number"
+                    min={1}
                     value={rateLimitConfig.max}
                     onChange={e => updateRateLimitConfig('max', parseInt(e.target.value) || 100)}
                   />
@@ -808,7 +812,12 @@ export function Infrastructure() {
                     </div>
                   </div>
                   <div className="queue-actions">
-                    <button className="btn-danger-outline">
+                    <button
+                      className="btn-danger-outline"
+                      disabled
+                      title={t('infrastructure.redis.clearFailedUnavailable')}
+                      aria-label={t('infrastructure.redis.clearFailedUnavailable')}
+                    >
                       <Trash2 size={16} />
                       {t('infrastructure.redis.clearFailed')}
                     </button>
@@ -933,7 +942,7 @@ export function Infrastructure() {
                       <div className="form-group">
                         <label>{t('infrastructure.storage.accessKey')}</label>
                         <input
-                          type="text"
+                          type="password"
                           value={storageConfig.s3AccessKey}
                           onChange={e => updateStorageConfig('s3AccessKey', e.target.value)}
                         />

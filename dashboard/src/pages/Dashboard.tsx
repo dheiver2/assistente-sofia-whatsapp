@@ -6,6 +6,8 @@ import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useSessionsQuery, useSessionStatsQuery, useWebhooksQuery, useStopSessionMutation } from '../hooks/queries';
 import { sessionApi } from '../services/api';
 import { PageHeader } from '../components/PageHeader';
+import { ConfirmDialog } from '../components/ConfirmDialog';
+import { useToast } from '../components/Toast';
 import './Dashboard.css';
 
 const USE_CASES = [
@@ -102,6 +104,7 @@ export function Dashboard() {
   const { t } = useTranslation();
   useDocumentTitle(t('dashboard.title'));
   const navigate = useNavigate();
+  const toast = useToast();
   const { data: sessions = [], isLoading: loadingSessions, error: sessionsError } = useSessionsQuery();
   const { data: stats } = useSessionStatsQuery();
   const { data: webhooks = [] } = useWebhooksQuery();
@@ -122,6 +125,8 @@ export function Dashboard() {
     }).catch(() => {});
   }, []);
 
+  const [disconnectId, setDisconnectId] = useState<string | null>(null);
+
   const onboardDone = Object.values(onboard).every(Boolean);
   const loading = loadingSessions;
   const error = sessionsError instanceof Error
@@ -134,8 +139,12 @@ export function Dashboard() {
   const handleDisconnect = async (id: string) => {
     try {
       await stopMutation.mutateAsync(id);
+      toast.success('Sessão desconectada');
     } catch (err) {
       console.error('Failed to disconnect:', err);
+      toast.error('Erro ao desconectar', err instanceof Error ? err.message : undefined);
+    } finally {
+      setDisconnectId(null);
     }
   };
 
@@ -177,7 +186,7 @@ export function Dashboard() {
   if (error) {
     return (
       <div className="dashboard" style={{ padding: '2rem' }}>
-        <div style={{ background: '#FEE2E2', padding: '1rem', borderRadius: '8px', color: '#DC2626' }}>
+        <div style={{ background: 'color-mix(in srgb, var(--error) 12%, transparent)', padding: '1rem', borderRadius: '8px', color: 'var(--error)', border: '1px solid color-mix(in srgb, var(--error) 30%, transparent)' }}>
           {t('dashboard.errorPrefix', { message: error })}
         </div>
       </div>
@@ -267,8 +276,14 @@ export function Dashboard() {
                     {t('dashboard.view')}
                   </button>
                   {['ready', 'initializing', 'connecting', 'qr_ready'].includes(session.status) && (
-                    <button className="btn-sm danger" onClick={() => handleDisconnect(session.id)}>
-                      {t('dashboard.disconnect')}
+                    <button
+                      className="btn-sm danger"
+                      onClick={() => setDisconnectId(session.id)}
+                      disabled={stopMutation.isPending}
+                    >
+                      {stopMutation.isPending && disconnectId === session.id
+                        ? t('common.loading')
+                        : t('dashboard.disconnect')}
                     </button>
                   )}
                 </div>
@@ -299,6 +314,19 @@ export function Dashboard() {
           ))}
         </div>
       </div>
+
+      <ConfirmDialog
+        open={disconnectId !== null}
+        title={t('dashboard.disconnect')}
+        message="Tem certeza que deseja desconectar esta sessão do WhatsApp?"
+        warning="A sessão ativa será encerrada e será necessário escanear o QR Code novamente para reconectar."
+        confirmLabel={t('dashboard.disconnect')}
+        cancelLabel={t('common.cancel')}
+        danger
+        busy={stopMutation.isPending}
+        onConfirm={() => disconnectId && handleDisconnect(disconnectId)}
+        onCancel={() => setDisconnectId(null)}
+      />
     </div>
   );
 }

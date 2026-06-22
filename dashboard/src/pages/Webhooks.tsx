@@ -233,7 +233,7 @@ export function Webhooks() {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{t('webhooks.createTitle')}</h2>
-              <button className="btn-icon" onClick={() => setShowCreateModal(false)}>
+              <button className="btn-icon" aria-label={t('common.close')} onClick={() => setShowCreateModal(false)}>
                 <X size={20} />
               </button>
             </div>
@@ -275,7 +275,17 @@ export function Webhooks() {
               <button className="btn-secondary" onClick={() => setShowCreateModal(false)}>
                 {t('common.cancel')}
               </button>
-              <button className="btn-primary" onClick={handleCreate}>
+              <button
+                className="btn-primary"
+                onClick={handleCreate}
+                disabled={
+                  createMutation.isPending ||
+                  !newWebhook.url ||
+                  !newWebhook.sessionId ||
+                  newWebhook.events.length === 0
+                }
+              >
+                {createMutation.isPending && <Loader2 size={16} className="animate-spin" />}
                 {t('common.create')}
               </button>
             </div>
@@ -288,7 +298,7 @@ export function Webhooks() {
           <div className="modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{t('webhooks.editTitle')}</h2>
-              <button className="btn-icon" onClick={() => setShowEditModal(false)}>
+              <button className="btn-icon" aria-label={t('common.close')} onClick={() => setShowEditModal(false)}>
                 <X size={20} />
               </button>
             </div>
@@ -331,7 +341,8 @@ export function Webhooks() {
               <button className="btn-secondary" onClick={() => setShowEditModal(false)}>
                 {t('common.cancel')}
               </button>
-              <button className="btn-primary" onClick={handleEdit}>
+              <button className="btn-primary" onClick={handleEdit} disabled={updateMutation.isPending}>
+                {updateMutation.isPending && <Loader2 size={16} className="animate-spin" />}
                 {t('webhooks.saveChanges')}
               </button>
             </div>
@@ -344,7 +355,7 @@ export function Webhooks() {
           <div className="modal modal-sm" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h2>{t('webhooks.deleteTitle')}</h2>
-              <button className="btn-icon" onClick={() => setShowDeleteModal(false)}>
+              <button className="btn-icon" aria-label={t('common.close')} onClick={() => setShowDeleteModal(false)}>
                 <X size={20} />
               </button>
             </div>

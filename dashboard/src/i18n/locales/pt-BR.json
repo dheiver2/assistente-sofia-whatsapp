@@ -47,7 +47,9 @@
     "logout": "Sair",
     "refresh": "Atualizar",
     "errorGeneric": "Ocorreu um erro",
-    "unknownError": "Erro desconhecido"
+    "unknownError": "Erro desconhecido",
+    "copiedToClipboard": "Copiado para a área de transferência",
+    "copyFailed": "Falha ao copiar"
   },
   "theme": {
     "light": "Claro",
@@ -424,6 +426,14 @@
       "copy": "Copiar",
       "revoke": "Revogar",
       "delete": "Excluir"
+    },
+    "toast": {
+      "createSuccess": "Chave de API criada",
+      "createError": "Falha ao criar chave de API",
+      "revokeSuccess": "Chave de API revogada",
+      "revokeError": "Falha ao revogar chave de API",
+      "deleteSuccess": "Chave de API excluída",
+      "deleteError": "Falha ao excluir chave de API"
     }
   },
   "logs": {
@@ -557,6 +567,7 @@
       "completed": "Concluídas",
       "failed": "Com falha",
       "clearFailed": "Limpar Tarefas com Falha",
+      "clearFailedUnavailable": "A limpeza de tarefas com falha ainda não está disponível",
       "viewBullMq": "Ver Painel do Bull MQ",
       "disabledTitle": "O Redis está Desabilitado",
       "disabledDesc": "Habilite o Redis para cache, armazenamento de sessões e filas de mensagens BullMQ.",

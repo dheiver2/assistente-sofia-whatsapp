@@ -1,5 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
+import { Loader2 } from 'lucide-react';
 import { sessionApi, recommendationsApi } from '../services/api';
+import { useToast } from '../components/Toast';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import type {
   Session,
   CatalogProduct,
@@ -209,18 +212,23 @@ function ProductModal({ initial, onSave, onClose }: ProductModalProps) {
 // ---------------------------------------------------------------------------
 
 function CatalogTab() {
+  const toast = useToast();
   const [products, setProducts] = useState<CatalogProduct[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editProduct, setEditProduct] = useState<CatalogProduct | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<CatalogProduct | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
+    setLoadError(null);
     try {
       const data = await recommendationsApi.listProducts();
       setProducts(data);
-    } catch {
-      // silently ignore — show empty state
+    } catch (err) {
+      setLoadError(err instanceof Error ? err.message : 'Erro ao carregar catálogo');
     } finally {
       setLoading(false);
     }
@@ -241,10 +249,18 @@ function CatalogTab() {
     await load();
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Excluir este produto?')) return;
-    await recommendationsApi.deleteProduct(id);
-    await load();
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      await recommendationsApi.deleteProduct(deleteTarget.id);
+      setDeleteTarget(null);
+      await load();
+    } catch (err) {
+      toast.error('Erro ao excluir', err instanceof Error ? err.message : undefined);
+    } finally {
+      setDeleting(false);
+    }
   };
 
   return (
@@ -256,6 +272,15 @@ function CatalogTab() {
 
       {loading ? (
         <p style={{ color: 'var(--text-secondary, #6b7280)', fontSize: '0.9rem' }}>Carregando catálogo...</p>
+      ) : loadError ? (
+        <div className="rec-empty">
+          <div className="rec-empty-icon">⚠️</div>
+          <h3>Erro ao carregar catálogo</h3>
+          <p>{loadError}</p>
+          <button className="rec-btn rec-btn-primary" onClick={() => void load()} style={{ marginTop: 12 }}>
+            Tentar novamente
+          </button>
+        </div>
       ) : products.length === 0 ? (
         <div className="rec-empty">
           <div className="rec-empty-icon">📦</div>
@@ -310,7 +335,7 @@ function CatalogTab() {
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button className="rec-btn rec-btn-secondary rec-btn-sm" onClick={() => openEdit(p)}>Editar</button>
-                      <button className="rec-btn rec-btn-danger rec-btn-sm" onClick={() => void handleDelete(p.id)}>Excluir</button>
+                      <button className="rec-btn rec-btn-danger rec-btn-sm" onClick={() => setDeleteTarget(p)}>Excluir</button>
                     </div>
                   </td>
                 </tr>
@@ -327,6 +352,18 @@ function CatalogTab() {
           onClose={() => setModalOpen(false)}
         />
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Excluir produto"
+        message={`Excluir "${deleteTarget?.name ?? ''}"?`}
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        danger
+        busy={deleting}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }
@@ -343,8 +380,10 @@ const PIPELINE_STAGES = [
 ];
 
 function AnalyzeTab() {
+  const toast = useToast();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [mode, setMode] = useState<'single' | 'batch'>('single');
+  const [sendingAll, setSendingAll] = useState(false);
 
   // Single mode state
   const [sessionId, setSessionId] = useState('');
@@ -396,12 +435,15 @@ function AnalyzeTab() {
   };
 
   const handleSendAll = async () => {
-    if (!result || !sessionId) return;
+    if (!result || !sessionId || sendingAll) return;
+    setSendingAll(true);
     try {
       await recommendationsApi.deliverBatch(sessionId, phone);
-      alert('Recomendações enviadas!');
+      toast.success('Recomendações enviadas!');
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao enviar');
+      toast.error('Erro ao enviar', err instanceof Error ? err.message : undefined);
+    } finally {
+      setSendingAll(false);
     }
   };
 
@@ -520,8 +562,14 @@ function AnalyzeTab() {
               ))}
 
               <div>
-                <button className="rec-btn rec-btn-primary" onClick={() => void handleSendAll()}>
-                  Enviar tudo
+                <button className="rec-btn rec-btn-primary" onClick={() => void handleSendAll()} disabled={sendingAll}>
+                  {sendingAll ? (
+                    <>
+                      <Loader2 size={16} className="spin" /> Enviando…
+                    </>
+                  ) : (
+                    'Enviar tudo'
+                  )}
                 </button>
               </div>
             </div>
@@ -594,11 +642,14 @@ function AnalyzeTab() {
 // ---------------------------------------------------------------------------
 
 function PendingTab() {
+  const toast = useToast();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [sessionId, setSessionId] = useState('');
   const [pending, setPending] = useState<ProductRecommendation[]>([]);
   const [loading, setLoading] = useState(false);
   const [sendingAll, setSendingAll] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<ProductRecommendation | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     sessionApi.list().then(list => {
@@ -627,28 +678,32 @@ function PendingTab() {
       await recommendationsApi.deliver(id);
       setPending(p => p.filter(r => r.id !== id));
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao enviar');
+      toast.error('Erro ao enviar', err instanceof Error ? err.message : undefined);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Excluir esta recomendação?')) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
     try {
-      await recommendationsApi.deletePending(id);
-      setPending(p => p.filter(r => r.id !== id));
+      await recommendationsApi.deletePending(deleteTarget.id);
+      setPending(p => p.filter(r => r.id !== deleteTarget.id));
+      setDeleteTarget(null);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao excluir');
+      toast.error('Erro ao excluir', err instanceof Error ? err.message : undefined);
+    } finally {
+      setDeleting(false);
     }
   };
 
   const handleDeliverAll = async () => {
-    if (!sessionId) return;
+    if (!sessionId || sendingAll) return;
     setSendingAll(true);
     try {
       await recommendationsApi.deliverAll(sessionId);
       await load(sessionId);
     } catch (err) {
-      alert(err instanceof Error ? err.message : 'Erro ao enviar todas');
+      toast.error('Erro ao enviar todas', err instanceof Error ? err.message : undefined);
     } finally {
       setSendingAll(false);
     }
@@ -673,7 +728,13 @@ function PendingTab() {
         </button>
         {pending.length > 0 && (
           <button className="rec-btn rec-btn-primary" onClick={() => void handleDeliverAll()} disabled={sendingAll}>
-            {sendingAll ? 'Enviando...' : 'Enviar todos'}
+            {sendingAll ? (
+              <>
+                <Loader2 size={16} className="spin" /> Enviando…
+              </>
+            ) : (
+              'Enviar todos'
+            )}
           </button>
         )}
       </div>
@@ -720,7 +781,7 @@ function PendingTab() {
                       <button className="rec-btn rec-btn-primary rec-btn-sm" onClick={() => void handleDeliver(rec.id)}>
                         Enviar
                       </button>
-                      <button className="rec-btn rec-btn-danger rec-btn-sm" onClick={() => void handleDelete(rec.id)}>
+                      <button className="rec-btn rec-btn-danger rec-btn-sm" onClick={() => setDeleteTarget(rec)}>
                         Excluir
                       </button>
                     </div>
@@ -731,6 +792,18 @@ function PendingTab() {
           </table>
         </div>
       )}
+
+      <ConfirmDialog
+        open={deleteTarget !== null}
+        title="Excluir recomendação"
+        message="Excluir esta recomendação?"
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        danger
+        busy={deleting}
+        onConfirm={() => void confirmDelete()}
+        onCancel={() => setDeleteTarget(null)}
+      />
     </div>
   );
 }

@@ -47,7 +47,9 @@
     "logout": "లాగౌట్",
     "refresh": "రిఫ్రెష్",
     "errorGeneric": "ఒక లోపం సంభవించింది",
-    "unknownError": "తెలియని లోపం"
+    "unknownError": "తెలియని లోపం",
+    "copiedToClipboard": "Copied to clipboard",
+    "copyFailed": "Failed to copy"
   },
   "theme": {
     "light": "లైట్",
@@ -133,7 +135,7 @@
     "version": "v{{version}} · {{date}}"
   },
   "home": "హోమ్",
-    "dashboard": {
+  "dashboard": {
     "title": "డ్యాష్‌బోర్డ్",
     "subtitle": "మీ వాట్సాప్ సెషన్లు మరియు యాక్టివిటీ యొక్క అవలోకనం",
     "stats": {
@@ -424,6 +426,14 @@
       "copy": "కాపీ",
       "revoke": "రద్దు చేయి",
       "delete": "తొలగించు"
+    },
+    "toast": {
+      "createSuccess": "API key created",
+      "createError": "Failed to create API key",
+      "revokeSuccess": "API key revoked",
+      "revokeError": "Failed to revoke API key",
+      "deleteSuccess": "API key deleted",
+      "deleteError": "Failed to delete API key"
     }
   },
   "logs": {
@@ -557,6 +567,7 @@
       "completed": "పూర్తయింది",
       "failed": "విఫలమైంది",
       "clearFailed": "విఫలమైన జాబ్స్‌ను క్లియర్ చేయి",
+      "clearFailedUnavailable": "Clearing failed jobs is not yet available",
       "viewBullMq": "Bull MQ డ్యాష్‌బోర్డ్‌ను చూడండి",
       "disabledTitle": "Redis నిలిపివేయబడింది",
       "disabledDesc": "క్యాషింగ్, సెషన్ స్టోరేజ్ మరియు BullMQ సందేశ క్యూల కోసం Redisని ప్రారంభించండి.",

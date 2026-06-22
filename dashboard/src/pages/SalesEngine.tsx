@@ -12,6 +12,7 @@ import {
 } from '../services/api';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useToast } from '../components/Toast';
+import { ConfirmDialog } from '../components/ConfirmDialog';
 import './SalesEngine.css';
 
 /* ── Constantes ─────────────────────────────────────────────── */
@@ -63,6 +64,12 @@ export function SalesEngine() {
   const [optOuts, setOptOuts] = useState<OptOut[]>([]);
   const [progressMap, setProgressMap] = useState<Record<string, CampaignProgress>>({});
   const [busy, setBusy] = useState(false);
+
+  /* confirmação de ação destrutiva */
+  const [confirm, setConfirm] = useState<{
+    title: string; message: string; warning?: string; run: () => Promise<void>;
+  } | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   /* campanha selecionada (funil) */
   const [selected, setSelected] = useState<Campaign | null>(null);
@@ -366,14 +373,28 @@ export function SalesEngine() {
                         <button className="se-btn-sm" onClick={() => void generate(c)} disabled={busy}><Sparkles size={13} /> Gerar mensagens</button>
                         <button className="se-btn-sm primary" onClick={() => void send(c)} disabled={busy}><Send size={13} /> Iniciar disparo</button>
                       </>}
-                      {c.status === 'sending' && <button className="se-btn-sm" onClick={() => void salesApi.pause(c.id).then(refresh)}><Pause size={13} /> Pausar</button>}
-                      {c.status === 'paused' && <button className="se-btn-sm primary" onClick={() => void salesApi.resume(c.id).then(refresh)}><Play size={13} /> Retomar</button>}
+                      {c.status === 'sending' && <button className="se-btn-sm" onClick={() => void salesApi.pause(c.id).then(refresh).catch(e => toast.error('Erro ao pausar', e instanceof Error ? e.message : ''))}><Pause size={13} /> Pausar</button>}
+                      {c.status === 'paused' && <button className="se-btn-sm primary" onClick={() => void salesApi.resume(c.id).then(refresh).catch(e => toast.error('Erro ao retomar', e instanceof Error ? e.message : ''))}><Play size={13} /> Retomar</button>}
                       {['done', 'sending'].includes(c.status) && (
                         <button className="se-btn-sm" onClick={() => void salesApi.report(c.id).then(data => setReportModal({ open: true, data })).catch(() => setReportModal({ open: true, data: {} }))}>
                           <FileText size={13} /> Relatório
                         </button>
                       )}
-                      <button className="se-btn-icon danger" onClick={() => void salesApi.deleteCampaign(c.id).then(refresh)} title="Excluir"><Trash2 size={13} /></button>
+                      <button
+                        className="se-btn-icon danger"
+                        aria-label="Excluir campanha"
+                        title="Excluir"
+                        onClick={() => setConfirm({
+                          title: 'Excluir campanha',
+                          message: `Excluir a campanha "${c.name}"? Todos os leads e mensagens dela serão removidos.`,
+                          warning: 'Esta ação não pode ser desfeita.',
+                          run: async () => {
+                            await salesApi.deleteCampaign(c.id);
+                            await refresh();
+                            toast.success('Campanha excluída', c.name);
+                          },
+                        })}
+                      ><Trash2 size={13} /></button>
                     </div>
 
                     {/* funil expandido */}
@@ -642,7 +663,20 @@ export function SalesEngine() {
                 <span className="se-source-name">{s.name}</span>
                 <span className="se-muted">postgres</span>
                 <button className="se-btn-sm" onClick={() => void salesApi.testSource(s.id).then(r => r.ok ? toast.success('OK', r.message) : toast.error('Falha', r.message))}>Testar</button>
-                <button className="se-btn-icon danger" onClick={() => void salesApi.deleteSource(s.id).then(refresh)}><Trash2 size={13} /></button>
+                <button
+                  className="se-btn-icon danger"
+                  aria-label="Excluir fonte"
+                  title="Excluir fonte"
+                  onClick={() => setConfirm({
+                    title: 'Excluir fonte de leads',
+                    message: `Remover a fonte "${s.name}"?`,
+                    run: async () => {
+                      await salesApi.deleteSource(s.id);
+                      await refresh();
+                      toast.success('Fonte removida', s.name);
+                    },
+                  })}
+                ><Trash2 size={13} /></button>
               </div>
             ))}
           </div>
@@ -664,7 +698,7 @@ export function SalesEngine() {
                     <tr key={o.id}>
                       <td>{o.phone}</td>
                       <td className="se-muted">{new Date(o.createdAt).toLocaleDateString('pt-BR')}</td>
-                      <td><button className="se-btn-icon danger" onClick={() => void salesApi.removeOptOut(o.id).then(() => setOptOuts(p => p.filter(x => x.id !== o.id)))}><Trash2 size={13} /></button></td>
+                      <td><button className="se-btn-icon danger" aria-label="Remover descadastro" title="Remover" onClick={() => void salesApi.removeOptOut(o.id).then(() => setOptOuts(p => p.filter(x => x.id !== o.id))).catch(e => toast.error('Erro ao remover', e instanceof Error ? e.message : ''))}><Trash2 size={13} /></button></td>
                     </tr>
                   ))}
                 </tbody>
@@ -734,6 +768,25 @@ export function SalesEngine() {
           </div>
         </div>
       )}
+
+      <ConfirmDialog
+        open={!!confirm}
+        title={confirm?.title ?? ''}
+        message={confirm?.message ?? ''}
+        warning={confirm?.warning}
+        confirmLabel="Excluir"
+        cancelLabel="Cancelar"
+        danger
+        busy={confirmBusy}
+        onCancel={() => { if (!confirmBusy) setConfirm(null); }}
+        onConfirm={() => {
+          if (!confirm) return;
+          setConfirmBusy(true);
+          void confirm.run()
+            .catch(e => toast.error('Erro', e instanceof Error ? e.message : ''))
+            .finally(() => { setConfirmBusy(false); setConfirm(null); });
+        }}
+      />
     </div>
   );
 }
