@@ -213,8 +213,15 @@ export class AutoReplyPlugin implements IPlugin {
   private onMessage(context: PluginContext, ctx: HookContext<IncomingMessage>): HookResult {
     const message = ctx.data;
 
-    // Reply only to inbound, non-group, engine-originated messages; never to our own sends.
+    // Reply only to inbound, engine-originated messages; never to our own sends or groups.
     if (ctx.source !== 'Engine' || !ctx.sessionId || message.fromMe || message.isGroup) {
+      return { continue: true };
+    }
+
+    // Respond ONLY to genuine 1:1 chats. `isGroup` doesn't catch channels/newsletters/broadcasts
+    // (and some engines don't flag @g.us groups reliably), so gate on the chat JID suffix — otherwise
+    // the bot replies to (and spams) groups/channels/status, which also floods Ollama on connect-sync.
+    if (!/@(c\.us|s\.whatsapp\.net|lid)$/.test(message.chatId ?? '')) {
       return { continue: true };
     }
 
