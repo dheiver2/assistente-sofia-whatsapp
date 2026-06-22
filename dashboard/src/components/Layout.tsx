@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { sessionApi } from '../services/api';
 import {
@@ -30,14 +30,29 @@ interface LayoutProps {
   userRole: UserRole | null;
 }
 
-const allNavItems = [
-  { to: '/', icon: Home, key: 'home' as const, adminOnly: false },
-  { to: '/sessoes', icon: Smartphone, key: 'sessions' as const, adminOnly: false },
-  { to: '/conversas', icon: MessageSquare, key: 'chats' as const, adminOnly: false },
-  { to: '/campanhas', icon: Rocket, key: 'campaigns' as const, adminOnly: false },
-  { to: '/contatos', icon: Users, key: 'contacts' as const, adminOnly: false },
-  { to: '/recomendacoes', icon: Sparkles, key: 'recommendations' as const, adminOnly: false },
-  { to: '/config', icon: Settings2, key: 'config' as const, adminOnly: false },
+type NavItem = { to: string; icon: typeof Home; key: string; adminOnly?: boolean };
+type NavGroup = { section: string; items: NavItem[] };
+
+// Grouped navigation — mirrors how messaging platforms (Chatwoot, Respond.io) organise the
+// sidebar by area instead of a flat list.
+const navGroups: NavGroup[] = [
+  { section: 'general', items: [{ to: '/', icon: Home, key: 'home' }] },
+  {
+    section: 'support',
+    items: [
+      { to: '/conversas', icon: MessageSquare, key: 'chats' },
+      { to: '/contatos', icon: Users, key: 'contacts' },
+    ],
+  },
+  {
+    section: 'growth',
+    items: [
+      { to: '/campanhas', icon: Rocket, key: 'campaigns' },
+      { to: '/recomendacoes', icon: Sparkles, key: 'recommendations' },
+    ],
+  },
+  { section: 'connections', items: [{ to: '/sessoes', icon: Smartphone, key: 'sessions' }] },
+  { section: 'system', items: [{ to: '/config', icon: Settings2, key: 'config' }] },
 ];
 
 const themeIcons = { light: Sun, dark: Moon, system: Monitor };
@@ -45,10 +60,20 @@ const themeIcons = { light: Sun, dark: Moon, system: Monitor };
 export function Layout({ onLogout, userRole }: LayoutProps) {
   const { t, i18n } = useTranslation();
   const { theme, toggleTheme } = useTheme();
+  const location = useLocation();
   const ThemeIcon = themeIcons[theme];
   const themeLabel = t(`theme.${theme}`);
 
-  const navItems = allNavItems.filter(item => !item.adminOnly || userRole === 'admin');
+  const visibleGroups = navGroups
+    .map(g => ({ ...g, items: g.items.filter(it => !it.adminOnly || userRole === 'admin') }))
+    .filter(g => g.items.length > 0);
+  const allItems = visibleGroups.flatMap(g => g.items);
+
+  // Title shown in the topbar = label of the currently active route.
+  const activeItem =
+    allItems.find(it => it.to !== '/' && location.pathname.startsWith(it.to)) ??
+    allItems.find(it => it.to === '/' && location.pathname === '/');
+  const pageTitle = activeItem ? t(`nav.${activeItem.key}`) : t('common.appName');
 
   const [readySessions, setReadySessions] = useState(0);
   useEffect(() => {
@@ -62,7 +87,9 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
   const [isMobileOpen, setIsMobileOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [isLanguageMenuOpen, setIsLanguageMenuOpen] = useState(false);
+  const [isAccountMenuOpen, setIsAccountMenuOpen] = useState(false);
   const languageMenuRef = useRef<HTMLDivElement>(null);
+  const accountMenuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const handleResize = () => {
@@ -85,25 +112,30 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
     };
   }, [isMobileOpen]);
 
+  // Close popover menus on outside click / Escape.
   useEffect(() => {
-    if (!isLanguageMenuOpen) return;
-
-    const closeOnOutsideClick = (event: MouseEvent) => {
-      if (!languageMenuRef.current?.contains(event.target as Node)) {
+    if (!isLanguageMenuOpen && !isAccountMenuOpen) return;
+    const onClick = (event: MouseEvent) => {
+      if (isLanguageMenuOpen && !languageMenuRef.current?.contains(event.target as Node)) {
         setIsLanguageMenuOpen(false);
       }
+      if (isAccountMenuOpen && !accountMenuRef.current?.contains(event.target as Node)) {
+        setIsAccountMenuOpen(false);
+      }
     };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setIsLanguageMenuOpen(false);
+    const onEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsLanguageMenuOpen(false);
+        setIsAccountMenuOpen(false);
+      }
     };
-
-    document.addEventListener('mousedown', closeOnOutsideClick);
-    document.addEventListener('keydown', closeOnEscape);
+    document.addEventListener('mousedown', onClick);
+    document.addEventListener('keydown', onEscape);
     return () => {
-      document.removeEventListener('mousedown', closeOnOutsideClick);
-      document.removeEventListener('keydown', closeOnEscape);
+      document.removeEventListener('mousedown', onClick);
+      document.removeEventListener('keydown', onEscape);
     };
-  }, [isLanguageMenuOpen]);
+  }, [isLanguageMenuOpen, isAccountMenuOpen]);
 
   const toggleCollapse = () => setIsCollapsed(!isCollapsed);
   const toggleMobile = () => setIsMobileOpen(!isMobileOpen);
@@ -116,21 +148,10 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
   };
   const isRtl = rtlLanguages.includes(currentLang);
 
+  const roleLabel = userRole === 'admin' ? t('roles.admin', { defaultValue: 'Administrador' }) : t('roles.member', { defaultValue: 'Operador' });
+
   return (
     <div className="layout">
-      {isMobile && (
-        <header className="mobile-header">
-          <button className="mobile-menu-btn" onClick={toggleMobile} aria-label={t('common.expand')}>
-            {isMobileOpen ? <X size={24} /> : <Menu size={24} />}
-          </button>
-          <div className="mobile-brand">
-            <img src="/openwa_logo.webp" alt="Mangaba AI" className="sidebar-logo" />
-            <span className="brand-name">{t('common.appName')}</span>
-          </div>
-          <div style={{ width: 40 }} />
-        </header>
-      )}
-
       {isMobile && isMobileOpen && <div className="sidebar-overlay" onClick={() => setIsMobileOpen(false)} />}
 
       <aside
@@ -160,22 +181,29 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
         )}
 
         <nav className="sidebar-nav">
-          {navItems.map(({ to, icon: Icon, key }) => {
-            const label = t(`nav.${key}`);
-            return (
-              <NavLink
-                key={to}
-                to={to}
-                className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
-                end={to === '/'}
-                onClick={handleNavClick}
-                title={isCollapsed ? label : undefined}
-              >
-                <Icon size={20} />
-                {!isCollapsed && <span>{label}</span>}
-              </NavLink>
-            );
-          })}
+          {visibleGroups.map(group => (
+            <div key={group.section} className="nav-group">
+              {!isCollapsed && (
+                <span className="nav-group-label">{t(`nav.section.${group.section}`, { defaultValue: group.section })}</span>
+              )}
+              {group.items.map(({ to, icon: Icon, key }) => {
+                const label = t(`nav.${key}`);
+                return (
+                  <NavLink
+                    key={to}
+                    to={to}
+                    className={({ isActive }) => `nav-item ${isActive ? 'active' : ''}`}
+                    end={to === '/'}
+                    onClick={handleNavClick}
+                    title={isCollapsed ? label : undefined}
+                  >
+                    <Icon size={19} />
+                    {!isCollapsed && <span>{label}</span>}
+                  </NavLink>
+                );
+              })}
+            </div>
+          ))}
         </nav>
 
         <div className="session-health" title={`${readySessions} sessão(ões) conectada(s)`}>
@@ -186,54 +214,96 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
             </span>
           )}
         </div>
-
-        <div className="sidebar-footer">
-          <div className="language-menu" ref={languageMenuRef}>
-            <button
-              className="theme-toggle-btn"
-              onClick={() => setIsLanguageMenuOpen(open => !open)}
-              title={t('common.language')}
-              aria-label={t('common.language')}
-              aria-haspopup="menu"
-              aria-expanded={isLanguageMenuOpen}
-            >
-              <Languages size={18} />
-              {!isCollapsed && <span>{languageLabel}</span>}
-            </button>
-            {isLanguageMenuOpen && (
-              <div className="language-menu-list" role="menu" aria-label={t('common.language')}>
-                {languageOptions.map(option => (
-                  <button
-                    key={option.value}
-                    className={`language-menu-item ${option.value === currentLang ? 'active' : ''}`}
-                    onClick={() => changeLanguage(option.value)}
-                    role="menuitemradio"
-                    aria-checked={option.value === currentLang}
-                  >
-                    <span>{option.label}</span>
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-          <button
-            className="theme-toggle-btn"
-            onClick={toggleTheme}
-            title={t('theme.label', { value: themeLabel })}
-          >
-            <ThemeIcon size={18} />
-            {!isCollapsed && <span>{themeLabel}</span>}
-          </button>
-          <button className="logout-btn" onClick={onLogout} title={isCollapsed ? t('common.logout') : undefined}>
-            <LogOut size={20} />
-            {!isCollapsed && <span>{t('common.logout')}</span>}
-          </button>
-        </div>
       </aside>
 
-      <main className={`main-content ${isCollapsed ? 'expanded' : ''} ${isMobile ? 'mobile' : ''}`}>
-        <Outlet />
-      </main>
+      <div className={`content-area ${isCollapsed ? 'expanded' : ''} ${isMobile ? 'mobile' : ''}`}>
+        <header className="topbar">
+          <div className="topbar-left">
+            {isMobile && (
+              <button className="topbar-icon-btn" onClick={toggleMobile} aria-label={t('common.expand')}>
+                {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
+              </button>
+            )}
+            <h1 className="topbar-title">{pageTitle}</h1>
+          </div>
+
+          <div className="topbar-right">
+            {/* Global context chip: connected sessions */}
+            <div className="topbar-chip" title={`${readySessions} sessão(ões) conectada(s)`}>
+              <span className={`health-dot ${readySessions > 0 ? 'online' : 'offline'}`} />
+              <span className="topbar-chip-label">
+                {readySessions > 0 ? `${readySessions} on-line` : 'Offline'}
+              </span>
+            </div>
+
+            <div className="topbar-menu" ref={languageMenuRef}>
+              <button
+                className="topbar-icon-btn"
+                onClick={() => { setIsLanguageMenuOpen(open => !open); setIsAccountMenuOpen(false); }}
+                title={t('common.language')}
+                aria-label={t('common.language')}
+                aria-haspopup="menu"
+                aria-expanded={isLanguageMenuOpen}
+              >
+                <Languages size={18} />
+                <span className="topbar-icon-btn-label">{languageLabel}</span>
+              </button>
+              {isLanguageMenuOpen && (
+                <div className="topbar-dropdown" role="menu" aria-label={t('common.language')}>
+                  {languageOptions.map(option => (
+                    <button
+                      key={option.value}
+                      className={`topbar-dropdown-item ${option.value === currentLang ? 'active' : ''}`}
+                      onClick={() => changeLanguage(option.value)}
+                      role="menuitemradio"
+                      aria-checked={option.value === currentLang}
+                    >
+                      <span>{option.label}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <button
+              className="topbar-icon-btn"
+              onClick={toggleTheme}
+              title={t('theme.label', { value: themeLabel })}
+              aria-label={t('theme.label', { value: themeLabel })}
+            >
+              <ThemeIcon size={18} />
+            </button>
+
+            <div className="topbar-menu" ref={accountMenuRef}>
+              <button
+                className="topbar-account"
+                onClick={() => { setIsAccountMenuOpen(open => !open); setIsLanguageMenuOpen(false); }}
+                aria-haspopup="menu"
+                aria-expanded={isAccountMenuOpen}
+                aria-label={t('common.account', { defaultValue: 'Conta' })}
+              >
+                <span className="topbar-avatar">{(userRole ?? 'u').charAt(0).toUpperCase()}</span>
+              </button>
+              {isAccountMenuOpen && (
+                <div className="topbar-dropdown account-dropdown" role="menu">
+                  <div className="account-info">
+                    <span className="account-role">{roleLabel}</span>
+                    <span className="account-sub">{t('common.appName')}</span>
+                  </div>
+                  <button className="topbar-dropdown-item danger" onClick={onLogout} role="menuitem">
+                    <LogOut size={16} />
+                    <span>{t('common.logout')}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
+        </header>
+
+        <main className="main-content">
+          <Outlet />
+        </main>
+      </div>
     </div>
   );
 }

@@ -73,7 +73,14 @@
     "infrastructure": "Infraestrutura",
     "plugins": "Plugins",
     "logs": "Logs",
-    "recommendations": "Recomendações"
+    "recommendations": "Recomendações",
+    "section": {
+      "general": "Geral",
+      "support": "Atendimento",
+      "growth": "Crescimento",
+      "connections": "Conexões",
+      "system": "Sistema"
+    }
   },
   "chats": {
     "subtitle": "Envie e responda mensagens do WhatsApp em tempo real",
