@@ -10,81 +10,6 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import './Dashboard.css';
 
-const USE_CASES = [
-  {
-    icon: '🔄',
-    title: 'Reativação de clientes inativos',
-    desc: 'Identifique clientes que não compram há 30+ dias e envie mensagens personalizadas com IA para reconquistar.',
-    steps: [
-      'Conecte sua base Postgres (host.docker.internal:5433 banco leads_demo) em Vendas → Fontes de Leads',
-      'Crie campanha com objetivo "Reativar clientes inativos" — selecione modelo Reativação',
-      'Faça upload da planilha ou use a fonte Postgres com query: SELECT * FROM leads_inativos',
-      'Clique Lançar — a IA gera e envia mensagens personalizadas automaticamente',
-    ],
-    result: '15-30% de taxa de reativação com conversa contínua até o fechamento',
-  },
-  {
-    icon: '🏥',
-    title: 'Lembretes de consulta automáticos',
-    desc: 'Clínicas e consultórios enviam lembretes 24h antes da consulta e confirmam presença automaticamente.',
-    steps: [
-      'Crie uma sessão WhatsApp em Sessões e configure a IA com persona "Clínica"',
-      'Em Templates, importe da Biblioteca o modelo "lembrete-consulta"',
-      'Integre via webhook POST /sessions/{id}/messages/send-template com os dados da consulta',
-      'A IA responde confirmações e reagendamentos automaticamente',
-    ],
-    result: 'Redução de 60% no no-show e agenda mais organizada',
-  },
-  {
-    icon: '🛒',
-    title: 'Recuperação de carrinho abandonado',
-    desc: 'E-commerces recuperam vendas enviando mensagens personalizadas para quem abandonou o carrinho.',
-    steps: [
-      'Configure webhook no seu e-commerce para disparar ao abandono de carrinho',
-      'O webhook chama POST /api/sessions/{id}/messages/send-template com template "carrinho-abandonado"',
-      'A IA mantém a conversa e responde dúvidas sobre o produto automaticamente',
-      'Webhook recebe evento de "replied" e notifica sua equipe de vendas',
-    ],
-    result: 'Recuperação de 10-25% dos carrinhos abandonados',
-  },
-  {
-    icon: '💅',
-    title: 'Agendamento automático (salão/clínica)',
-    desc: 'Clientes enviam mensagem pedindo horário e a IA verifica disponibilidade e confirma o agendamento.',
-    steps: [
-      'Configure sessão com persona "Beleza" — a IA conhece todos os serviços e preços',
-      'Importe templates: confirmacao-agendamento e lembrete-beleza da Biblioteca',
-      'Conecte webhook ao seu sistema de agendamento (Calendly, SimplyBook, sistema próprio)',
-      'A IA agenda, confirma e lembra automaticamente — 24h antes envia lembrete',
-    ],
-    result: 'Agenda 100% preenchida com zero esforço manual',
-  },
-  {
-    icon: '🏠',
-    title: 'Captação e nutrição de leads imobiliários',
-    desc: 'Corretores qualificam leads automaticamente e enviam imóveis compatíveis com o perfil do cliente.',
-    steps: [
-      'Configure sessão com persona "Imobiliária" para qualificação inicial automática',
-      'A IA pergunta: localização, quartos, orçamento, compra ou aluguel',
-      'Webhook envia perfil qualificado ao CRM do corretor',
-      'Crie campanha com lista de imóveis para nutrição de leads inativos',
-    ],
-    result: 'Triagem 100% automática e mais tempo do corretor para fechar negócios',
-  },
-  {
-    icon: '💰',
-    title: 'Cobrança amigável e negociação',
-    desc: 'Régua de cobrança automática com IA que negocia parcelamentos e condições especiais.',
-    steps: [
-      'Importe template "lembrete-vencimento" da Biblioteca em Templates',
-      'Configure campanha com segmento de clientes em atraso da base Postgres',
-      'Selecione modelo "Financeiro" — a IA sabe oferecer desconto e parcelamento',
-      'Clientes que respondem recebem proposta automática de negociação',
-    ],
-    result: 'Redução de inadimplência com negociações 24/7 sem equipe',
-  },
-];
-
 const AVATAR_COLORS = ['#25d366', '#3b82f6', '#f59e0b', '#14b8a6', '#8b5cf6', '#ec4899', '#ef4444', '#0ea5e9'];
 
 function hashKey(key: string): number {
@@ -352,28 +277,6 @@ export function Dashboard() {
           </div>
         )}
       </section>
-
-      {/* ── Casos de uso reais ── */}
-      <div className="use-cases-section">
-        <h2 className="use-cases-title">🚀 Casos de uso reais — comece em 3 passos</h2>
-        <div className="use-cases-grid">
-          {USE_CASES.map(uc => (
-            <div key={uc.title} className="use-case-card">
-              <div className="uc-icon">{uc.icon}</div>
-              <div className="uc-content">
-                <h3>{uc.title}</h3>
-                <p>{uc.desc}</p>
-                <ol className="uc-steps">
-                  {uc.steps.map((s, i) => <li key={i}>{s}</li>)}
-                </ol>
-                <div className="uc-result">
-                  <span className="uc-result-label">Resultado esperado:</span> {uc.result}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
 
       <ConfirmDialog
         open={disconnectId !== null}
