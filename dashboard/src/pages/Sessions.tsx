@@ -10,6 +10,30 @@ import { PageHeader } from '../components/PageHeader';
 import { PERSONA_PRESETS } from '../data/personaLibrary';
 import './Sessions.css';
 
+// Avatar palette — hash the session id to pick a stable color.
+const AVATAR_COLORS = ['#25d366', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#10b981'];
+
+function avatarColor(id: string): string {
+  let hash = 0;
+  for (let i = 0; i < id.length; i++) hash = (hash * 31 + id.charCodeAt(i)) | 0;
+  return AVATAR_COLORS[Math.abs(hash) % AVATAR_COLORS.length];
+}
+
+function getInitials(name: string): string {
+  const parts = name.replace(/[-_]/g, ' ').trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+// Map a raw session status to a semantic visual tone.
+function statusTone(status: string): 'success' | 'warning' | 'error' | 'muted' {
+  if (status === 'ready') return 'success';
+  if (['initializing', 'connecting', 'qr_ready'].includes(status)) return 'warning';
+  if (['disconnected', 'failed'].includes(status)) return 'error';
+  return 'muted';
+}
+
 export function Sessions() {
   const { t } = useTranslation();
   useDocumentTitle(t('sessions.title'));
@@ -323,6 +347,10 @@ export function Sessions() {
     return matchesSearch && matchesStatus;
   });
 
+  const totalCount = sessions.length;
+  const connectedCount = sessions.filter(s => s.status === 'ready').length;
+  const offlineCount = sessions.filter(s => ['disconnected', 'failed'].includes(s.status)).length;
+
   if (loading) {
     return (
       <div
@@ -348,6 +376,32 @@ export function Sessions() {
           )
         }
       />
+
+      {totalCount > 0 && (
+        <div className="kpi-row">
+          <div className="kpi-card">
+            <div className="kpi-icon kpi-icon-green"><QrCode size={20} /></div>
+            <div className="kpi-meta">
+              <span className="kpi-value">{totalCount}</span>
+              <span className="kpi-label">{t('sessions.kpi.total', { defaultValue: 'Total de sessões' })}</span>
+            </div>
+          </div>
+          <div className="kpi-card">
+            <div className="kpi-icon kpi-icon-blue"><CheckCircle2 size={20} /></div>
+            <div className="kpi-meta">
+              <span className="kpi-value">{connectedCount}</span>
+              <span className="kpi-label">{t('sessions.kpi.connected', { defaultValue: 'Conectadas' })}</span>
+            </div>
+          </div>
+          <div className="kpi-card">
+            <div className="kpi-icon kpi-icon-amber"><Circle size={20} /></div>
+            <div className="kpi-meta">
+              <span className="kpi-value">{offlineCount}</span>
+              <span className="kpi-label">{t('sessions.kpi.offline', { defaultValue: 'Desconectadas / erro' })}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="filters-bar">
         <div className="search-input">
@@ -454,7 +508,7 @@ export function Sessions() {
                 <span className="session-name">{qrData.sessionName}</span>
               </div>
               <button className="btn-close" onClick={() => setQrData(null)} aria-label={t('common.close')}>
-                <X size={20} color="#64748b" />
+                <X size={20} />
               </button>
             </div>
             <div className="modal-body" style={{ textAlign: 'center' }}>
@@ -788,8 +842,18 @@ export function Sessions() {
           filteredSessions.map(session => (
             <div key={session.id} className="session-card">
               <div className="card-header">
-                <h3 title={session.name}>{session.name}</h3>
-                <span className={`status-pill ${session.status}`}>{formatStatus(session.status)}</span>
+                <div className="card-identity">
+                  <div className="session-avatar" style={{ background: avatarColor(session.id) }}>
+                    {getInitials(session.name)}
+                  </div>
+                  <div className="card-identity-text">
+                    <h3 title={session.name}>{session.name}</h3>
+                    <span className="card-phone">{session.phone || t('sessions.card.phoneNone', { defaultValue: 'Sem número' })}</span>
+                  </div>
+                </div>
+                <span className={`status-badge tone-${statusTone(session.status)}`}>
+                  {formatStatus(session.status)}
+                </span>
               </div>
 
               {session.status === 'initializing' || session.status === 'connecting' || session.status === 'qr_ready' ? (

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { MessageSquare, Send, Webhook, Activity, ArrowUpRight, ArrowDownRight, Loader2 } from 'lucide-react';
+import { MessageSquare, Send, Webhook, Activity, Loader2, MessagesSquare, Megaphone, Smartphone, ArrowRight } from 'lucide-react';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useSessionsQuery, useSessionStatsQuery, useWebhooksQuery, useStopSessionMutation } from '../hooks/queries';
 import { sessionApi } from '../services/api';
@@ -85,7 +85,32 @@ const USE_CASES = [
   },
 ];
 
-function OnboardStep({ done, label, link, linkLabel, hint }: { done: boolean; label: string; link: string; linkLabel: string; hint?: string }) {
+const AVATAR_COLORS = ['#25d366', '#3b82f6', '#f59e0b', '#14b8a6', '#8b5cf6', '#ec4899', '#ef4444', '#0ea5e9'];
+
+function hashKey(key: string): number {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function avatarColor(key: string): string {
+  return AVATAR_COLORS[hashKey(key) % AVATAR_COLORS.length];
+}
+
+function initials(name: string): string {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].substring(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+}
+
+function statusDotColor(status: string): string {
+  if (['ready', 'connected', 'open', 'online'].includes(status)) return '#22c55e';
+  if (['connecting', 'initializing', 'qr_ready', 'pending'].includes(status)) return '#f59e0b';
+  return 'var(--text-muted)';
+}
+
+function OnboardStep({ done, label, link, linkLabel, hint, onNavigate }: { done: boolean; label: string; link: string; linkLabel: string; hint?: string; onNavigate: (to: string) => void }) {
   return (
     <div className={`onboard-step ${done ? 'done' : ''}`}>
       <span className="onboard-check">{done ? '✅' : '⬜'}</span>
@@ -94,7 +119,7 @@ function OnboardStep({ done, label, link, linkLabel, hint }: { done: boolean; la
         {hint && <span className="onboard-step-hint">{hint}</span>}
       </div>
       {!done && (
-        <a href={link} className="onboard-link">{linkLabel}</a>
+        <button type="button" className="onboard-link" onClick={() => onNavigate(link)}>{linkLabel}</button>
       )}
     </div>
   );
@@ -153,12 +178,18 @@ export function Dashboard() {
       label: t('dashboard.stats.activeSessions'),
       value: stats?.active ?? 0,
       icon: MessageSquare,
-      trend: `+${stats?.ready ?? 0}`,
-      trendUp: true,
+      color: 'var(--primary)',
+      hint: `${stats?.ready ?? 0} ${t('common.connected').toLowerCase()}`,
     },
-    { label: t('dashboard.stats.messagesToday'), value: '—', icon: Send, trend: '0', trendUp: null },
-    { label: t('dashboard.stats.webhooksConfigured'), value: webhookCount, icon: Webhook, trend: '0', trendUp: null },
-    { label: t('dashboard.stats.apiCalls'), value: '—', icon: Activity, trend: '0', trendUp: null },
+    { label: t('dashboard.stats.messagesToday'), value: '—', icon: Send, color: '#3b82f6', hint: null },
+    { label: t('dashboard.stats.webhooksConfigured'), value: webhookCount, icon: Webhook, color: '#f59e0b', hint: null },
+    { label: t('dashboard.stats.apiCalls'), value: '—', icon: Activity, color: '#14b8a6', hint: null },
+  ];
+
+  const quickActions = [
+    { label: t('nav.conversations', { defaultValue: 'Conversas' }), icon: MessagesSquare, to: '/conversas', color: '#3b82f6' },
+    { label: t('nav.campaigns', { defaultValue: 'Campanhas' }), icon: Megaphone, to: '/campanhas', color: '#f59e0b' },
+    { label: t('nav.sessions', { defaultValue: 'Sessões' }), icon: Smartphone, to: '/sessoes', color: 'var(--primary)' },
   ];
 
   const formatLastActive = (date?: string) => {
@@ -206,21 +237,38 @@ export function Dashboard() {
       />
 
       <div className="stats-grid">
-        {statsCards.map(({ label, value, icon: Icon, trend, trendUp }) => (
+        {statsCards.map(({ label, value, icon: Icon, color, hint }) => (
           <div key={label} className="stat-card">
-            <Icon className="stat-watermark" />
-            <div className="stat-header">
-              <span className="stat-label">{label}</span>
-              <Icon size={20} className="stat-icon" />
+            <div
+              className="stat-chip"
+              style={{
+                background: `color-mix(in srgb, ${color} 14%, transparent)`,
+                color,
+              }}
+            >
+              <Icon size={20} />
             </div>
-            <div className="stat-value">{typeof value === 'number' ? value.toLocaleString() : value}</div>
-            {trend !== '0' && (
-              <div className={`stat-trend ${trendUp ? 'up' : 'down'}`}>
-                {trendUp ? <ArrowUpRight size={14} /> : <ArrowDownRight size={14} />}
-                {trend}
-              </div>
-            )}
+            <div className="stat-body">
+              <div className="stat-value">{typeof value === 'number' ? value.toLocaleString() : value}</div>
+              <span className="stat-label">{label}</span>
+              {hint && <span className="stat-hint">{hint}</span>}
+            </div>
           </div>
+        ))}
+      </div>
+
+      <div className="quick-actions">
+        {quickActions.map(({ label, icon: Icon, to, color }) => (
+          <button key={to} className="quick-action" onClick={() => navigate(to)}>
+            <span
+              className="qa-chip"
+              style={{ background: `color-mix(in srgb, ${color} 14%, transparent)`, color }}
+            >
+              <Icon size={18} />
+            </span>
+            <span className="qa-label">{label}</span>
+            <ArrowRight size={16} className="qa-arrow" />
+          </button>
         ))}
       </div>
 
@@ -231,10 +279,10 @@ export function Dashboard() {
             <span className="onboard-sub">{Object.values(onboard).filter(Boolean).length} de 4 concluídos</span>
           </div>
           <div className="onboard-steps">
-            <OnboardStep done={onboard.session} label="Conectar sessão WhatsApp" link="/sessoes" linkLabel="Criar sessão →" />
-            <OnboardStep done={onboard.ai} label="Configurar assistente de IA" link="/sessoes" linkLabel="Configurar →" hint="Aba IA na sessão criada" />
-            <OnboardStep done={onboard.message} label="Enviar primeira mensagem" link="/conversas" linkLabel="Ir para Conversas →" />
-            <OnboardStep done={onboard.campaign} label="Lançar primeira campanha" link="/campanhas" linkLabel="Ir para Campanhas →" />
+            <OnboardStep done={onboard.session} label="Conectar sessão WhatsApp" link="/sessoes" linkLabel="Criar sessão →" onNavigate={navigate} />
+            <OnboardStep done={onboard.ai} label="Configurar assistente de IA" link="/sessoes" linkLabel="Configurar →" hint="Aba IA na sessão criada" onNavigate={navigate} />
+            <OnboardStep done={onboard.message} label="Enviar primeira mensagem" link="/conversas" linkLabel="Ir para Conversas →" onNavigate={navigate} />
+            <OnboardStep done={onboard.campaign} label="Lançar primeira campanha" link="/campanhas" linkLabel="Ir para Campanhas →" onNavigate={navigate} />
           </div>
         </div>
       )}
@@ -247,32 +295,44 @@ export function Dashboard() {
           </span>
         </div>
 
-        <div className="sessions-table">
-          <div className="table-header">
-            <span>{t('dashboard.columns.sessionId')}</span>
-            <span>{t('dashboard.columns.phone')}</span>
-            <span>{t('dashboard.columns.status')}</span>
-            <span>{t('dashboard.columns.lastActive')}</span>
-            <span>{t('dashboard.columns.actions')}</span>
-          </div>
-          {sessions.length === 0 ? (
-            <div className="table-row" style={{ justifyContent: 'center', color: 'var(--text-muted)' }}>
-              {t('dashboard.noSessions')}
+        {sessions.length === 0 ? (
+          <div className="empty-state">
+            <div className="empty-icon">
+              <Smartphone size={28} />
             </div>
-          ) : (
-            sessions.map(session => (
-              <div key={session.id} className="table-row">
-                <div className="session-info-cell">
-                  <span className="session-id">{session.id.substring(0, 12)}</span>
-                  <span className="session-name" title={session.name}>
-                    {session.name}
+            <p className="empty-title">{t('dashboard.noSessions')}</p>
+            <button className="empty-cta" onClick={() => navigate('/sessoes')}>
+              {t('dashboard.view')}
+              <ArrowRight size={15} />
+            </button>
+          </div>
+        ) : (
+          <div className="session-list">
+            {sessions.map(session => (
+              <div key={session.id} className="session-row">
+                <div className="session-avatar-wrap">
+                  <span className="session-avatar" style={{ background: avatarColor(session.id) }}>
+                    {initials(session.name || session.id)}
+                  </span>
+                  <span className="session-status-dot" style={{ background: statusDotColor(session.status) }} />
+                </div>
+                <div className="session-main">
+                  <span className="session-name" title={session.name}>{session.name || session.id.substring(0, 12)}</span>
+                  <span className="session-meta">
+                    {session.phone || session.id.substring(0, 12)} · {formatLastActive(session.lastActive)}
                   </span>
                 </div>
-                <span className="phone">{session.phone || '—'}</span>
-                <span className={`status-pill ${session.status}`}>{formatStatus(session.status)}</span>
-                <span className="last-active">{formatLastActive(session.lastActive)}</span>
+                <span
+                  className="status-pill"
+                  style={{
+                    background: `color-mix(in srgb, ${statusDotColor(session.status)} 14%, transparent)`,
+                    color: statusDotColor(session.status),
+                  }}
+                >
+                  {formatStatus(session.status)}
+                </span>
                 <div className="actions">
-                  <button className="btn-sm" onClick={() => navigate('/sessions')}>
+                  <button className="btn-sm" onClick={() => navigate('/sessoes')}>
                     {t('dashboard.view')}
                   </button>
                   {['ready', 'initializing', 'connecting', 'qr_ready'].includes(session.status) && (
@@ -288,9 +348,9 @@ export function Dashboard() {
                   )}
                 </div>
               </div>
-            ))
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </section>
 
       {/* ── Casos de uso reais ── */}
