@@ -34,8 +34,8 @@ const HISTORY_TURNS = () => Number(process.env.AI_HISTORY_TURNS ?? 8);
 const DEBOUNCE_MS = () => Number(process.env.AI_DEBOUNCE_MS ?? 3500);
 const PERSONAS_FILE = () => process.env.AI_PERSONAS_FILE ?? '/app/data/personas.json';
 // Handoff humano: por quanto tempo a IA fica em silêncio numa conversa depois que um humano
-// respondeu manualmente (renovado a cada mensagem do humano). Default 60 min.
-const HANDOFF_PAUSE_MS = () => Number(process.env.AI_HANDOFF_PAUSE_MS ?? 3_600_000);
+// respondeu manualmente (renovado a cada mensagem do humano). Default 10 min.
+const HANDOFF_PAUSE_MS = () => Number(process.env.AI_HANDOFF_PAUSE_MS ?? 600_000);
 // Janela para reconhecer o "eco" de uma mensagem que a própria IA enviou (fromMe) e não
 // confundir com um humano assumindo a conversa.
 const AI_ECHO_WINDOW_MS = 25_000;
