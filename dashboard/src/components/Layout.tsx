@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { NavLink, Outlet, useLocation } from 'react-router-dom';
+import { NavLink, Outlet } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { sessionApi } from '../services/api';
 import {
@@ -60,20 +60,12 @@ const themeIcons = { light: Sun, dark: Moon, system: Monitor };
 export function Layout({ onLogout, userRole }: LayoutProps) {
   const { t, i18n } = useTranslation();
   const { theme, toggleTheme } = useTheme();
-  const location = useLocation();
   const ThemeIcon = themeIcons[theme];
   const themeLabel = t(`theme.${theme}`);
 
   const visibleGroups = navGroups
     .map(g => ({ ...g, items: g.items.filter(it => !it.adminOnly || userRole === 'admin') }))
     .filter(g => g.items.length > 0);
-  const allItems = visibleGroups.flatMap(g => g.items);
-
-  // Title shown in the topbar = label of the currently active route.
-  const activeItem =
-    allItems.find(it => it.to !== '/' && location.pathname.startsWith(it.to)) ??
-    allItems.find(it => it.to === '/' && location.pathname === '/');
-  const pageTitle = activeItem ? t(`nav.${activeItem.key}`) : t('common.appName');
 
   const [readySessions, setReadySessions] = useState(0);
   useEffect(() => {
@@ -226,7 +218,7 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
                 {isMobileOpen ? <X size={22} /> : <Menu size={22} />}
               </button>
             )}
-            <h1 className="topbar-title">{pageTitle}</h1>
+            {/* The page's own header already shows its title — no duplicate here. */}
           </div>
 
           <div className="topbar-right">
