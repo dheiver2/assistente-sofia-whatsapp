@@ -1,5 +1,35 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsBoolean, IsOptional, IsString, MaxLength } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsBoolean, IsObject, IsOptional, IsString, MaxLength, ValidateNested } from 'class-validator';
+
+/**
+ * Horário comercial da IA de atendimento. Quando habilitado, a Sofia só responde dentro da
+ * agenda; fora dela envia `outsideMessage`. `schedule` mapeia o dia (mon..sun) para
+ * { start, end } no formato "HH:MM", ou `false` quando fechado naquele dia.
+ */
+export class BusinessHoursDto {
+  @ApiPropertyOptional({ description: 'Liga/desliga a checagem de horário comercial.' })
+  @IsOptional()
+  @IsBoolean()
+  enabled?: boolean;
+
+  @ApiPropertyOptional({ description: "Fuso horário IANA (ex.: 'America/Sao_Paulo')." })
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  timezone?: string;
+
+  @ApiPropertyOptional({ description: 'Agenda por dia: { mon: { start, end } | false, ... }.' })
+  @IsOptional()
+  @IsObject()
+  schedule?: Record<string, { start: string; end: string } | false>;
+
+  @ApiPropertyOptional({ description: 'Mensagem enviada fora do horário comercial.' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(2000)
+  outsideMessage?: string;
+}
 
 /**
  * Configuração da IA de atendimento de uma sessão (uma empresa = uma sessão).
@@ -37,6 +67,12 @@ export class AiConfigDto {
   @IsString()
   @MaxLength(2000)
   greeting?: string;
+
+  @ApiPropertyOptional({ description: 'Horário comercial: responde só dentro da agenda; fora envia outsideMessage.', type: BusinessHoursDto })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => BusinessHoursDto)
+  businessHours?: BusinessHoursDto;
 }
 
 export type AiConfig = AiConfigDto;

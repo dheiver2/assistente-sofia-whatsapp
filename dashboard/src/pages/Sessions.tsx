@@ -34,6 +34,17 @@ function statusTone(status: string): 'success' | 'warning' | 'error' | 'muted' {
   return 'muted';
 }
 
+// Business-hours weekly grid (keys match the auto-reply plugin's schedule map).
+const BH_DAYS: { key: string; label: string }[] = [
+  { key: 'mon', label: 'Seg' }, { key: 'tue', label: 'Ter' }, { key: 'wed', label: 'Qua' },
+  { key: 'thu', label: 'Qui' }, { key: 'fri', label: 'Sex' }, { key: 'sat', label: 'Sáb' }, { key: 'sun', label: 'Dom' },
+];
+const DEFAULT_BH_SCHEDULE: Record<string, { start: string; end: string } | false> = {
+  mon: { start: '09:00', end: '18:00' }, tue: { start: '09:00', end: '18:00' },
+  wed: { start: '09:00', end: '18:00' }, thu: { start: '09:00', end: '18:00' },
+  fri: { start: '09:00', end: '18:00' }, sat: false, sun: false,
+};
+
 export function Sessions() {
   const { t } = useTranslation();
   useDocumentTitle(t('sessions.title'));
@@ -102,6 +113,15 @@ export function Sessions() {
     }
   };
 
+  const setBhDayTime = (day: string, field: 'start' | 'end', value: string) =>
+    setAiConfig(c => {
+      const sched = { ...(c.businessHours?.schedule ?? {}) };
+      const cur = sched[day];
+      const rule = cur ? cur : { start: '09:00', end: '18:00' };
+      sched[day] = { ...rule, [field]: value };
+      return { ...c, businessHours: { ...c.businessHours, schedule: sched } };
+    });
+
   const saveAiConfig = useCallback(async () => {
     if (!aiSession) return;
     setAiSaving(true);
@@ -112,6 +132,7 @@ export function Sessions() {
         knowledge: aiConfig.knowledge ?? '',
         model: aiConfig.model ?? '',
         greeting: aiConfig.greeting ?? '',
+        ...(aiConfig.businessHours ? { businessHours: aiConfig.businessHours } : {}),
       });
       toast.success(t('sessions.ai.savedTitle'), t('sessions.ai.savedDesc', { name: aiSession.name }));
       setAiSession(null);
@@ -734,6 +755,77 @@ export function Sessions() {
                       onChange={e => setAiConfig(c => ({ ...c, model: e.target.value }))}
                     />
                     <small>{t('sessions.ai.modelHint')}</small>
+                  </div>
+
+                  <div className="form-group">
+                    <label className="ai-bh-toggle">
+                      <input
+                        type="checkbox"
+                        checked={!!aiConfig.businessHours?.enabled}
+                        onChange={e => setAiConfig(c => ({
+                          ...c,
+                          businessHours: {
+                            timezone: 'America/Sao_Paulo',
+                            outsideMessage: 'Nosso atendimento está fora do horário. Retornaremos assim que possível!',
+                            schedule: DEFAULT_BH_SCHEDULE,
+                            ...c.businessHours,
+                            enabled: e.target.checked,
+                          },
+                        }))}
+                      />
+                      {t('sessions.ai.businessHoursLabel', 'Horário comercial')}
+                    </label>
+                    <small>{t('sessions.ai.businessHoursHint', 'Quando ativo, a IA só responde dentro da agenda; fora, envia a mensagem abaixo.')}</small>
+
+                    {aiConfig.businessHours?.enabled && (
+                      <div className="ai-bh-panel">
+                        <div className="ai-bh-tz">
+                          <label>{t('sessions.ai.timezoneLabel', 'Fuso horário')}</label>
+                          <input
+                            type="text"
+                            value={aiConfig.businessHours.timezone ?? 'America/Sao_Paulo'}
+                            onChange={e => setAiConfig(c => ({ ...c, businessHours: { ...c.businessHours, timezone: e.target.value } }))}
+                          />
+                        </div>
+                        {BH_DAYS.map(d => {
+                          const rule = aiConfig.businessHours?.schedule?.[d.key];
+                          const open = rule ? rule : null;
+                          return (
+                            <div key={d.key} className="ai-bh-day">
+                              <label className="ai-bh-dayname">
+                                <input
+                                  type="checkbox"
+                                  checked={!!open}
+                                  onChange={e => setAiConfig(c => {
+                                    const sched = { ...(c.businessHours?.schedule ?? {}) };
+                                    sched[d.key] = e.target.checked ? { start: '09:00', end: '18:00' } : false;
+                                    return { ...c, businessHours: { ...c.businessHours, schedule: sched } };
+                                  })}
+                                />
+                                {d.label}
+                              </label>
+                              {open ? (
+                                <div className="ai-bh-times">
+                                  <input type="time" value={open.start} onChange={e => setBhDayTime(d.key, 'start', e.target.value)} />
+                                  <span>—</span>
+                                  <input type="time" value={open.end} onChange={e => setBhDayTime(d.key, 'end', e.target.value)} />
+                                </div>
+                              ) : (
+                                <span className="ai-bh-closed">{t('sessions.ai.closed', 'Fechado')}</span>
+                              )}
+                            </div>
+                          );
+                        })}
+                        <div className="ai-bh-outside">
+                          <label>{t('sessions.ai.outsideMessageLabel', 'Mensagem fora do horário')}</label>
+                          <textarea
+                            rows={2}
+                            value={aiConfig.businessHours.outsideMessage ?? ''}
+                            onChange={e => setAiConfig(c => ({ ...c, businessHours: { ...c.businessHours, outsideMessage: e.target.value } }))}
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </>
               )}

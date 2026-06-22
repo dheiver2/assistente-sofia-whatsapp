@@ -343,12 +343,21 @@ export const sessionApi = {
 };
 
 // AI attendant config per session (one company = one session).
+export interface BusinessHours {
+  enabled?: boolean;
+  timezone?: string;
+  /** day (mon..sun) -> { start, end } in "HH:MM", or false when closed that day. */
+  schedule?: Record<string, { start: string; end: string } | false>;
+  outsideMessage?: string;
+}
+
 export interface AiConfig {
   enabled?: boolean;
   persona?: string;
   knowledge?: string;
   model?: string;
   greeting?: string;
+  businessHours?: BusinessHours;
 }
 
 // ===== Sales Engine (Motor de Vendas) =====

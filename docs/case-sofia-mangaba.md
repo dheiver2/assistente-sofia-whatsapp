@@ -100,8 +100,19 @@ AI_DEBOUNCE_MS=3500       # agrupa rajadas e responde 1x
    senão, a **default Sofia** já vale.
 5. Pronto: mensagens diretas recebidas na ausência do professor são respondidas pela Sofia.
 
-> Horário comercial: dá para configurar (na aba IA da sessão) para a Sofia só responder fora do
-> expediente, ou sempre — conforme a preferência do professor.
+### Cumprimento próprio (por sessão)
+Na aba **IA** da sessão, cole no campo **Saudação inicial** o texto abaixo — ele é enviado
+automaticamente no **primeiro contato** de cada conversa:
+
+> Olá! Eu sou a Sofia, assistente virtual do professor Dheiver Santos, da Mangaba AI. O professor
+> não está disponível neste momento, mas estou aqui para te ajudar. Como posso te chamar e no que
+> posso ajudar hoje?
+
+### Horário comercial (por sessão)
+Também na aba **IA**, ative **Horário comercial**: a Sofia só responde dentro da agenda definida
+(por dia da semana, com início/fim e fuso); fora do expediente ela envia a **mensagem fora do
+horário**. Exemplo de agenda: Seg–Sex 09:00–18:00, Sáb/Dom fechado, fuso `America/Sao_Paulo`, com
+a mensagem "Nosso atendimento está fora do horário. Retornaremos assim que possível!".
 
 ---
 

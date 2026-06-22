@@ -985,3 +985,78 @@
 .preset-chips { display: flex; flex-wrap: wrap; gap: 7px; }
 .preset-chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border, #e2e8f0); background: var(--bg-light, #f8fafc); color: var(--text-primary, #0f172a); font-size: 0.82rem; cursor: pointer; white-space: nowrap; transition: border-color 0.15s, background 0.15s; }
 .preset-chip:hover { border-color: var(--primary, #ff7a1a); background: var(--bg-white, #fff); }
+
+/* ── Horário comercial (aba IA) ─────────────────────────────── */
+.ai-bh-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  font-weight: 600;
+}
+.ai-bh-toggle input { width: 16px; height: 16px; accent-color: var(--primary); }
+
+.ai-bh-panel {
+  margin-top: 0.75rem;
+  padding: 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-light);
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.ai-bh-tz { display: flex; align-items: center; gap: 0.6rem; }
+.ai-bh-tz label { font-size: 0.8rem; color: var(--text-secondary); min-width: 84px; }
+.ai-bh-tz input {
+  flex: 1;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-white);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.ai-bh-day {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 32px;
+}
+.ai-bh-dayname {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  width: 72px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  cursor: pointer;
+}
+.ai-bh-dayname input { width: 15px; height: 15px; accent-color: var(--primary); }
+
+.ai-bh-times { display: flex; align-items: center; gap: 0.4rem; }
+.ai-bh-times input {
+  padding: 0.3rem 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: var(--bg-white);
+  color: var(--text-primary);
+  font-size: 0.8rem;
+}
+.ai-bh-closed { font-size: 0.78rem; color: var(--text-muted); font-style: italic; }
+
+.ai-bh-outside { display: flex; flex-direction: column; gap: 0.3rem; margin-top: 0.3rem; }
+.ai-bh-outside label { font-size: 0.8rem; color: var(--text-secondary); }
+.ai-bh-outside textarea {
+  width: 100%;
+  padding: 0.5rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-white);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+  resize: vertical;
+}
