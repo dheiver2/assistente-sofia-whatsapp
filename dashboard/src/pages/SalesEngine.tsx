@@ -4,6 +4,7 @@ import {
   Loader2, Upload, Send, Sparkles, Trash2, Database,
   RefreshCw, MessageSquare, X, Pause, Play, Plus,
   ChevronRight, Settings, Zap, BarChart3, Clock, FileText,
+  CheckCircle2,
 } from 'lucide-react';
 import {
   sessionApi, salesApi, messageApi,
@@ -334,7 +335,38 @@ export function SalesEngine() {
               <button className="se-btn-primary" onClick={() => setTab('nova')}><Zap size={15} /> Criar primeira campanha</button>
             </div>
           ) : (
-            <div className="se-campaign-list">
+            <>
+              <div className="se-kpis">
+                <div className="se-kpi">
+                  <div className="se-kpi-icon kpi-blue"><BarChart3 size={18} /></div>
+                  <div className="se-kpi-body">
+                    <span className="se-kpi-num">{campaigns.length}</span>
+                    <span className="se-kpi-lbl">Campanhas</span>
+                  </div>
+                </div>
+                <div className="se-kpi">
+                  <div className="se-kpi-icon kpi-green"><Send size={18} /></div>
+                  <div className="se-kpi-body">
+                    <span className="se-kpi-num">{campaigns.filter(c => c.status === 'sending').length}</span>
+                    <span className="se-kpi-lbl">Em disparo</span>
+                  </div>
+                </div>
+                <div className="se-kpi">
+                  <div className="se-kpi-icon kpi-amber"><Clock size={18} /></div>
+                  <div className="se-kpi-body">
+                    <span className="se-kpi-num">{campaigns.filter(c => c.scheduledAt && c.status === 'draft').length}</span>
+                    <span className="se-kpi-lbl">Agendadas</span>
+                  </div>
+                </div>
+                <div className="se-kpi">
+                  <div className="se-kpi-icon kpi-teal"><CheckCircle2 size={18} /></div>
+                  <div className="se-kpi-body">
+                    <span className="se-kpi-num">{campaigns.filter(c => c.status === 'done').length}</span>
+                    <span className="se-kpi-lbl">Concluídas</span>
+                  </div>
+                </div>
+              </div>
+              <div className="se-campaign-list">
               {campaigns.map(c => {
                 const prog = progressMap[c.id];
                 const pct = prog && prog.total > 0 ? Math.round((prog.sent / prog.total) * 100) : 0;
@@ -432,7 +464,8 @@ export function SalesEngine() {
                   </div>
                 );
               })}
-            </div>
+              </div>
+            </>
           )}
         </div>
       )}
