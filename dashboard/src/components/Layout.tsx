@@ -158,10 +158,11 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
         className={`sidebar ${isCollapsed ? 'collapsed' : ''} ${isMobile ? 'mobile' : ''} ${isMobileOpen ? 'open' : ''}`}
       >
         <div className="sidebar-header">
-          <img src="/openwa_logo.webp" alt="Mangaba AI" className="sidebar-logo" />
-          {!isCollapsed && (
+          {isCollapsed ? (
+            <span className="sidebar-monogram" aria-label={t('common.appName')}>m</span>
+          ) : (
             <div className="sidebar-brand">
-              <span className="brand-name">{t('common.appName')}</span>
+              <img src="/brand-logo.svg" alt="Mangaba" className="sidebar-wordmark" />
               <span className="brand-subtitle">{t('common.appSubtitle')}</span>
             </div>
           )}

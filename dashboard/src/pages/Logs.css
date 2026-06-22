@@ -136,7 +136,7 @@
 }
 
 .logs-table .table-row:not(.header):hover {
-  background: rgba(37, 211, 102, 0.05);
+  background: rgba(255, 122, 26, 0.05);
 }
 
 .timestamp {

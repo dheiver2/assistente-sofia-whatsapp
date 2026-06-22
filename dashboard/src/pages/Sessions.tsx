@@ -11,7 +11,7 @@ import { PERSONA_PRESETS } from '../data/personaLibrary';
 import './Sessions.css';
 
 // Avatar palette — hash the session id to pick a stable color.
-const AVATAR_COLORS = ['#25d366', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#10b981'];
+const AVATAR_COLORS = ['#ff7a1a', '#3b82f6', '#8b5cf6', '#f59e0b', '#ef4444', '#06b6d4', '#ec4899', '#10b981'];
 
 function avatarColor(id: string): string {
   let hash = 0;

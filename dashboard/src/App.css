@@ -1,8 +1,16 @@
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&family=JetBrains+Mono:ital,wght@0,100..800;1,100..800&display=swap');
 
 :root {
-  --primary: #25d366;
-  --primary-hover: #1da851;
+  /* Mangaba brand palette (from brand-logo.svg) */
+  --primary: #ff7a1a;          /* mangaba orange */
+  --primary-hover: #e9620a;
+  --brand-orange: #ff7a1a;
+  --brand-orange-deep: #e94a12;
+  --brand-yellow: #ffd83d;
+  --brand-green: #7bbf26;
+  --brand-green-deep: #689924;
+  --brand-dark: #403731;       /* warm charcoal (wordmark) */
+  --brand-cream: #fffcf0;
   --bg-light: #f8fafc;
   --bg-white: #ffffff;
   --bg-card: #ffffff;

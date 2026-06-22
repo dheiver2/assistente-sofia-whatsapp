@@ -80,7 +80,7 @@
 }
 
 .keys-table tbody tr.table-row:hover {
-  background: rgba(37, 211, 102, 0.05);
+  background: rgba(255, 122, 26, 0.05);
 }
 
 .keys-table tbody tr.table-row:nth-child(even) {
@@ -88,7 +88,7 @@
 }
 
 .keys-table tbody tr.table-row:nth-child(even):hover {
-  background: rgba(37, 211, 102, 0.05);
+  background: rgba(255, 122, 26, 0.05);
 }
 
 .name-cell {
@@ -144,7 +144,7 @@
 }
 
 .permission-badge:first-child:last-child {
-  background: rgba(37, 211, 102, 0.1);
+  background: rgba(255, 122, 26, 0.1);
   color: var(--primary);
 }
 
@@ -214,7 +214,7 @@
 .perm-item code {
   font-size: 0.8125rem;
   color: var(--primary);
-  background: rgba(37, 211, 102, 0.1);
+  background: rgba(255, 122, 26, 0.1);
   padding: 0.25rem 0.5rem;
   border-radius: 4px;
   width: fit-content;
@@ -411,7 +411,7 @@
   }
 
   .status-badge.active {
-    background: rgba(37, 211, 102, 0.1);
+    background: rgba(255, 122, 26, 0.1);
     color: var(--primary);
   }
 

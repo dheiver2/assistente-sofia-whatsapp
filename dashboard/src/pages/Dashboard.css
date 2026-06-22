@@ -465,13 +465,13 @@
   padding: 8px 10px;
   border-radius: 8px;
   background: var(--bg-light, #f8fafc);
-  border-left: 3px solid var(--primary, #25d366);
+  border-left: 3px solid var(--primary, #ff7a1a);
   color: var(--text-primary, #0f172a);
 }
 
 .uc-result-label {
   font-weight: 600;
-  color: var(--primary, #25d366);
+  color: var(--primary, #ff7a1a);
 }
 
 [data-theme='dark'] .use-case-card {
@@ -501,7 +501,7 @@
 /* ── Onboarding card ── */
 .onboard-card {
   margin: 0 2rem 20px;
-  border: 1.5px solid var(--primary, #25d366);
+  border: 1.5px solid var(--primary, #ff7a1a);
   border-radius: 14px;
   background: var(--bg-white, #fff);
   overflow: hidden;
@@ -512,12 +512,12 @@
   align-items: center;
   justify-content: space-between;
   padding: 14px 20px;
-  background: linear-gradient(135deg, #25d36615, #25d36605);
+  background: linear-gradient(135deg, #ff7a1a15, #ff7a1a05);
   border-bottom: 1px solid var(--border, #e2e8f0);
 }
 
 .onboard-title { font-weight: 700; font-size: 0.95rem; color: var(--text-primary, #0f172a); }
-.onboard-sub { font-size: 0.82rem; color: var(--primary, #25d366); font-weight: 600; }
+.onboard-sub { font-size: 0.82rem; color: var(--primary, #ff7a1a); font-weight: 600; }
 
 .onboard-steps { padding: 6px 0; }
 
@@ -542,7 +542,7 @@
 .onboard-link {
   font-size: 0.82rem;
   font-weight: 600;
-  color: var(--primary, #25d366);
+  color: var(--primary, #ff7a1a);
   text-decoration: none;
   white-space: nowrap;
   background: none;

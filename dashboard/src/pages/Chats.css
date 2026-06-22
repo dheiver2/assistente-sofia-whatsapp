@@ -1017,7 +1017,7 @@
 
 .status-filter-pill.active {
   border-color: var(--primary);
-  background: rgba(37, 211, 102, 0.12);
+  background: rgba(255, 122, 26, 0.12);
   color: var(--primary-hover);
   font-weight: 600;
 }
@@ -1191,8 +1191,8 @@
 
 [data-theme='dark'] .status-filter-pill.active {
   background: #0d2e1e;
-  border-color: #25d366;
-  color: #25d366;
+  border-color: #ff7a1a;
+  color: #ff7a1a;
 }
 
 [data-theme='dark'] .room-status-btn {
@@ -1220,7 +1220,7 @@
 }
 
 [data-theme='dark'] .quick-reply-name {
-  color: #25d366;
+  color: #ff7a1a;
 }
 
 [data-theme='dark'] .quick-reply-body {

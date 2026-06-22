@@ -9,7 +9,7 @@ import { ConfirmDialog } from '../components/ConfirmDialog';
 import { useToast } from '../components/Toast';
 import './Dashboard.css';
 
-const AVATAR_COLORS = ['#25d366', '#3b82f6', '#f59e0b', '#14b8a6', '#8b5cf6', '#ec4899', '#ef4444', '#0ea5e9'];
+const AVATAR_COLORS = ['#ff7a1a', '#3b82f6', '#f59e0b', '#14b8a6', '#8b5cf6', '#ec4899', '#ef4444', '#0ea5e9'];
 
 function hashKey(key: string): number {
   let h = 0;

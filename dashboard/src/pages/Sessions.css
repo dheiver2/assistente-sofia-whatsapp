@@ -984,4 +984,4 @@
 /* Persona preset chips */
 .preset-chips { display: flex; flex-wrap: wrap; gap: 7px; }
 .preset-chip { display: inline-flex; align-items: center; gap: 4px; padding: 5px 12px; border-radius: 20px; border: 1px solid var(--border, #e2e8f0); background: var(--bg-light, #f8fafc); color: var(--text-primary, #0f172a); font-size: 0.82rem; cursor: pointer; white-space: nowrap; transition: border-color 0.15s, background 0.15s; }
-.preset-chip:hover { border-color: var(--primary, #25d366); background: var(--bg-white, #fff); }
+.preset-chip:hover { border-color: var(--primary, #ff7a1a); background: var(--bg-white, #fff); }

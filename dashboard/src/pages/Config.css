@@ -31,8 +31,8 @@
 .config-tab:hover { color: var(--text-primary, #0f172a); }
 
 .config-tab.active {
-  color: var(--primary, #25d366);
-  border-bottom-color: var(--primary, #25d366);
+  color: var(--primary, #ff7a1a);
+  border-bottom-color: var(--primary, #ff7a1a);
   font-weight: 600;
 }
 

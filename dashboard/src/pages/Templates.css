@@ -114,7 +114,7 @@
   outline: none;
   border-color: var(--primary);
   background: var(--bg-white);
-  box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 122, 26, 0.1);
 }
 
 .template-editor-actions {
@@ -254,9 +254,9 @@
 
 .template-placeholder-tags span {
   padding: 0.25rem 0.5rem;
-  border: 1px solid rgba(37, 211, 102, 0.25);
+  border: 1px solid rgba(255, 122, 26, 0.25);
   border-radius: 6px;
-  background: rgba(37, 211, 102, 0.12);
+  background: rgba(255, 122, 26, 0.12);
   color: var(--primary);
   font-family: 'JetBrains Mono', ui-monospace, monospace;
   font-size: 0.75rem;
@@ -406,7 +406,7 @@
 .library-header h2 { margin: 0; font-size: 1.1rem; font-weight: 700; }
 .library-cats { display: flex; gap: 7px; flex-wrap: wrap; padding: 14px 24px 0; }
 .lib-cat { padding: 4px 14px; border-radius: 20px; border: 1px solid var(--border, #e2e8f0); background: var(--bg-light, #f8fafc); color: var(--text-primary, #0f172a); font-size: 0.82rem; cursor: pointer; }
-.lib-cat.active { background: var(--primary, #25d366); border-color: var(--primary, #25d366); color: #fff; }
+.lib-cat.active { background: var(--primary, #ff7a1a); border-color: var(--primary, #ff7a1a); color: #fff; }
 .library-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; padding: 16px 24px 24px; overflow-y: auto; }
 .lib-card { border: 1px solid var(--border, #e2e8f0); border-radius: 12px; padding: 14px; background: var(--bg-light, #f8fafc); display: flex; flex-direction: column; gap: 8px; }
 .lib-card-top { display: flex; align-items: center; gap: 8px; }

@@ -33,7 +33,7 @@ const STATUS_LABEL: Record<string, string> = {
 };
 const STATUS_COLOR: Record<string, string> = {
   draft: '#94a3b8', generating: '#3b82f6', ready: '#f59e0b',
-  sending: '#25d366', paused: '#f97316', done: '#64748b',
+  sending: '#ff7a1a', paused: '#f97316', done: '#64748b',
 };
 const STAGE_LABEL: Record<string, string> = {
   pending: 'Pendente', approved: 'Aprovada', sent: 'Enviada',

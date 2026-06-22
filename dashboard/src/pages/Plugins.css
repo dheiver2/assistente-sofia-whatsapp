@@ -433,7 +433,7 @@
   outline: none;
   border-color: var(--primary);
   background: var(--bg-white);
-  box-shadow: 0 0 0 3px rgba(37, 211, 102, 0.1);
+  box-shadow: 0 0 0 3px rgba(255, 122, 26, 0.1);
 }
 
 .config-form .form-group small {
