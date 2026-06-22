@@ -12,11 +12,15 @@ export interface OllamaChatOptions {
   numPredict?: number;
   timeoutMs?: number;
   url?: string;
+  /** How long Ollama keeps the model loaded after the call (e.g. '30m'). Avoids cold-load failures. */
+  keepAlive?: string;
 }
 
 const DEFAULT_URL = process.env.OLLAMA_URL ?? 'http://host.docker.internal:11434';
 const DEFAULT_MODEL = process.env.OLLAMA_MODEL ?? 'qwen2.5:7b-instruct';
 const DEFAULT_TIMEOUT = Number(process.env.OLLAMA_TIMEOUT_MS ?? 30000);
+// Keep the model resident between messages so a cold load never delays/abort the live reply.
+const DEFAULT_KEEP_ALIVE = process.env.OLLAMA_KEEP_ALIVE ?? '30m';
 
 export const OLLAMA_DEFAULTS = { url: DEFAULT_URL, model: DEFAULT_MODEL, timeoutMs: DEFAULT_TIMEOUT };
 
@@ -33,6 +37,7 @@ export async function ollamaChat(opts: OllamaChatOptions): Promise<string> {
     const body: Record<string, unknown> = {
       model: opts.model,
       stream: false,
+      keep_alive: opts.keepAlive ?? DEFAULT_KEEP_ALIVE,
       messages: opts.messages,
       options: {
         temperature: opts.temperature ?? 0.7,

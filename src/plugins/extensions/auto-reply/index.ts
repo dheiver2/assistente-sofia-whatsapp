@@ -187,16 +187,27 @@ export class AutoReplyPlugin implements IPlugin {
   }
 
   private async generate(model: string, systemPrompt: string, history: ChatTurn[], userText: string): Promise<string> {
-    const text = (await ollamaChat({
-      model,
-      messages: [{ role: 'system', content: systemPrompt }, ...history, { role: 'user', content: userText }],
-      temperature: 0.7,
-      numPredict: 140,
-      url: OLLAMA_URL,
-      timeoutMs: TIMEOUT_MS,
-    })).trim();
-    if (!text) throw new Error('empty AI response');
-    return text;
+    // Retry once: the first message after an idle period can fail while Ollama cold-loads the model
+    // (transient "fetch failed"). A single retry turns that into a normal reply instead of a fallback.
+    let lastErr: unknown;
+    for (let attempt = 0; attempt < 2; attempt++) {
+      try {
+        const text = (await ollamaChat({
+          model,
+          messages: [{ role: 'system', content: systemPrompt }, ...history, { role: 'user', content: userText }],
+          temperature: 0.7,
+          numPredict: 140,
+          url: OLLAMA_URL,
+          timeoutMs: TIMEOUT_MS,
+        })).trim();
+        if (!text) throw new Error('empty AI response');
+        return text;
+      } catch (err) {
+        lastErr = err;
+        if (attempt === 0) await new Promise(r => setTimeout(r, 1500)); // brief pause before retry
+      }
+    }
+    throw lastErr instanceof Error ? lastErr : new Error('AI generation failed');
   }
 
   private onMessage(context: PluginContext, ctx: HookContext<IncomingMessage>): HookResult {
