@@ -968,7 +968,9 @@ export function Sessions() {
                   </div>
                   <div className="info-row">
                     <span className="info-label">{t('sessions.card.sessionId')}</span>
-                    <span className="info-value mono">{session.id.substring(0, 12)}</span>
+                    <span className="info-value mono" title={session.id}>
+                      {session.id.slice(0, 8)}…{session.id.slice(-4)}
+                    </span>
                   </div>
                   <div className="info-row">
                     <span className="info-label">{t('sessions.card.lastActive')}</span>
