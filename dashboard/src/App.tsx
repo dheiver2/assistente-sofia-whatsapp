@@ -13,10 +13,9 @@ const Login = lazy(() => import('./pages/Login').then(m => ({ default: m.Login }
 const Dashboard = lazy(() => import('./pages/Dashboard').then(m => ({ default: m.Dashboard })));
 const Sessions = lazy(() => import('./pages/Sessions').then(m => ({ default: m.Sessions })));
 const Chats = lazy(() => import('./pages/Chats').then(m => ({ default: m.Chats })));
-const SalesEngine = lazy(() => import('./pages/SalesEngine').then(m => ({ default: m.SalesEngine })));
+const Sales = lazy(() => import('./pages/Sales').then(m => ({ default: m.Sales })));
 const Config = lazy(() => import('./pages/Config').then(m => ({ default: m.Config })));
 const Contacts = lazy(() => import('./pages/Contacts').then(m => ({ default: m.Contacts })));
-const Recommendations = lazy(() => import('./pages/Recommendations'));
 const Landing = lazy(() => import('./pages/Landing'));
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -103,14 +102,15 @@ function AppContent() {
             <Route index element={<Dashboard />} />
             <Route path="sessoes" element={<Sessions />} />
             <Route path="conversas" element={<Chats />} />
-            <Route path="campanhas" element={<SalesEngine />} />
+            <Route path="vendas" element={<Sales />} />
             <Route path="contatos" element={<Contacts />} />
-            <Route path="recomendacoes" element={<Recommendations />} />
             <Route path="config" element={<Config />} />
             {/* Legacy redirects — keep old URLs working */}
             <Route path="sessions" element={<Navigate to="/sessoes" replace />} />
             <Route path="chats" element={<Navigate to="/conversas" replace />} />
-            <Route path="sales" element={<Navigate to="/campanhas" replace />} />
+            <Route path="campanhas" element={<Navigate to="/vendas" replace />} />
+            <Route path="recomendacoes" element={<Navigate to="/vendas?m=rec" replace />} />
+            <Route path="sales" element={<Navigate to="/vendas" replace />} />
             <Route path="webhooks" element={<Navigate to="/config?tab=webhooks" replace />} />
             <Route path="templates" element={<Navigate to="/config?tab=templates" replace />} />
             <Route path="api-keys" element={<Navigate to="/config?tab=apikeys" replace />} />

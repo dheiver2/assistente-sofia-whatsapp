@@ -18,7 +18,6 @@ import {
   ChevronRight,
   Languages,
   Users,
-  Sparkles,
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { type UserRole } from '../hooks/useRole';
@@ -47,8 +46,7 @@ const navGroups: NavGroup[] = [
   {
     section: 'growth',
     items: [
-      { to: '/campanhas', icon: Rocket, key: 'campaigns' },
-      { to: '/recomendacoes', icon: Sparkles, key: 'recommendations' },
+      { to: '/vendas', icon: Rocket, key: 'sales' },
     ],
   },
   { section: 'connections', items: [{ to: '/sessoes', icon: Smartphone, key: 'sessions' }] },

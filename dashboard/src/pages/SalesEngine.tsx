@@ -51,7 +51,7 @@ type Tab = 'campanhas' | 'nova' | 'config';
 
 /* ── Componente principal ────────────────────────────────────── */
 
-export function SalesEngine() {
+export function SalesEngine({ embedded = false }: { embedded?: boolean } = {}) {
   useDocumentTitle('Campanhas');
   const toast = useToast();
 
@@ -296,7 +296,7 @@ export function SalesEngine() {
       {/* ── Barra superior ── */}
       <div className="se-topbar">
         <div className="se-topbar-left">
-          <h1 className="se-title">Campanhas</h1>
+          {!embedded && <h1 className="se-title">Campanhas</h1>}
           <select className="se-session-select" value={sessionId} onChange={e => setSessionId(e.target.value)}>
             {sessions.map(s => <option key={s.id} value={s.id}>{s.name}{s.phone ? ` · ${s.phone}` : ''}</option>)}
           </select>

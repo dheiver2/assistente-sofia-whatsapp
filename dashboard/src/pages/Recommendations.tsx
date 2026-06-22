@@ -820,13 +820,17 @@ const TABS: { key: TabKey; label: string }[] = [
   { key: 'pending', label: 'Recomendações' },
 ];
 
-export default function Recommendations() {
+export default function Recommendations({ embedded = false }: { embedded?: boolean } = {}) {
   const [activeTab, setActiveTab] = useState<TabKey>('catalog');
 
   return (
     <div className="rec-page">
-      <h1>Recomendações</h1>
-      <p className="rec-subtitle">Gerencie o catálogo, analise contatos com IA e envie recomendações personalizadas.</p>
+      {!embedded && (
+        <>
+          <h1>Recomendações</h1>
+          <p className="rec-subtitle">Gerencie o catálogo, analise contatos com IA e envie recomendações personalizadas.</p>
+        </>
+      )}
 
       <div className="rec-tabs">
         {TABS.map(tab => (

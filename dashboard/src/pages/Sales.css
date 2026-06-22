@@ -1,0 +1,51 @@
+.sales-hub {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.sales-hub-tabs {
+  display: flex;
+  gap: 10px;
+  padding: 16px 24px 0;
+  background: var(--bg-light);
+}
+
+.sales-hub-tab {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 16px;
+  background: var(--bg-white);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  cursor: pointer;
+  color: var(--text-secondary);
+  transition: all 0.15s;
+  text-align: left;
+}
+
+.sales-hub-tab svg { flex-shrink: 0; color: var(--text-muted); transition: color 0.15s; }
+
+.sales-hub-tab span { display: flex; flex-direction: column; line-height: 1.25; }
+.sales-hub-tab strong { font-size: 0.9rem; font-weight: 700; color: var(--text-primary); }
+.sales-hub-tab small { font-size: 0.72rem; color: var(--text-muted); }
+
+.sales-hub-tab:hover { border-color: var(--text-muted); }
+
+.sales-hub-tab.active {
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, var(--bg-white));
+}
+.sales-hub-tab.active svg { color: var(--primary); }
+.sales-hub-tab.active strong { color: var(--primary); }
+
+.sales-hub-body {
+  flex: 1;
+  min-height: 0;
+}
+
+@media (max-width: 600px) {
+  .sales-hub-tabs { flex-direction: column; padding: 12px 16px 0; }
+  .sales-hub-tab { width: 100%; }
+}
