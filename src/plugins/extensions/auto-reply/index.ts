@@ -39,6 +39,9 @@ const HANDOFF_PAUSE_MS = () => Number(process.env.AI_HANDOFF_PAUSE_MS ?? 600_000
 // Janela para reconhecer o "eco" de uma mensagem que a própria IA enviou (fromMe) e não
 // confundir com um humano assumindo a conversa.
 const AI_ECHO_WINDOW_MS = 25_000;
+// Normaliza texto para o match de eco ser robusto a diferenças de espaço/quebra de linha
+// (\r\n vs \n, espaços à toa) que o engine possa introduzir no body ecoado.
+const normText = (s: string): string => s.replace(/\s+/g, ' ').trim();
 const DEFAULT_PROMPT = () =>
   process.env.AI_SYSTEM_PROMPT ??
   'Você é uma assistente de atendimento via WhatsApp, simpática e prestativa. ' +
@@ -118,6 +121,7 @@ export class AutoReplyPlugin implements IPlugin {
   // Textos enviados recentemente pela própria IA, por conversa — usados para reconhecer o "eco"
   // fromMe da IA e NÃO confundir com um humano respondendo manualmente.
   private readonly aiSentRecent = new Map<string, { text: string; at: number }[]>();
+  private cleanupTimer?: ReturnType<typeof setInterval>;
 
   constructor(private readonly resolveSession?: SessionResolver) {}
 
@@ -125,8 +129,21 @@ export class AutoReplyPlugin implements IPlugin {
   private recordAiSent(key: string, text: string): void {
     const now = Date.now();
     const list = (this.aiSentRecent.get(key) ?? []).filter(r => now - r.at < AI_ECHO_WINDOW_MS);
-    list.push({ text: text.trim(), at: now });
+    list.push({ text: normText(text), at: now });
     this.aiSentRecent.set(key, list);
+  }
+
+  /** Remove pausas expiradas e ecos antigos — evita crescimento ilimitado dos mapas. */
+  private pruneState(): void {
+    const now = Date.now();
+    for (const [k, until] of this.humanPausedUntil) {
+      if (until <= now) this.humanPausedUntil.delete(k);
+    }
+    for (const [k, list] of this.aiSentRecent) {
+      const fresh = list.filter(r => now - r.at < AI_ECHO_WINDOW_MS);
+      if (fresh.length) this.aiSentRecent.set(k, fresh);
+      else this.aiSentRecent.delete(k);
+    }
   }
 
   onEnable(context: PluginContext): Promise<void> {
@@ -136,6 +153,8 @@ export class AutoReplyPlugin implements IPlugin {
     context.logger.log(
       `AI auto-reply enabled (model=${OLLAMA_MODEL()}, memória=${HISTORY_TURNS()} turnos, personas=${PERSONAS_FILE()})`,
     );
+    // Sweep periódico das pausas/ecos expirados (limita a memória num servidor multi-empresa).
+    this.cleanupTimer = setInterval(() => this.pruneState(), 300_000);
     return Promise.resolve();
   }
 
@@ -144,6 +163,7 @@ export class AutoReplyPlugin implements IPlugin {
     for (const burst of this.bursts.values()) {
       clearTimeout(burst.timer);
     }
+    if (this.cleanupTimer) { clearInterval(this.cleanupTimer); this.cleanupTimer = undefined; }
     this.bursts.clear();
     this.humanPausedUntil.clear();
     this.aiSentRecent.clear();
@@ -254,11 +274,12 @@ export class AutoReplyPlugin implements IPlugin {
     // Pausamos a IA nessa conversa para nunca falar por cima do humano. Vale em qualquer sessão.
     if (message.fromMe) {
       if (isIndividual) {
-        const body = (message.body ?? '').trim();
+        const body = normText(message.body ?? '');
         const recents = this.aiSentRecent.get(key) ?? [];
         const idx = recents.findIndex(r => r.text === body && Date.now() - r.at < AI_ECHO_WINDOW_MS);
         if (idx >= 0) {
           recents.splice(idx, 1); // é o eco da própria IA — ignora
+          if (recents.length === 0) this.aiSentRecent.delete(key);
         } else {
           // Humano assumiu: silencia a IA e cancela qualquer resposta pendente nessa conversa.
           this.humanPausedUntil.set(key, Date.now() + HANDOFF_PAUSE_MS());

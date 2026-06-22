@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Rocket, Sparkles } from 'lucide-react';
 import { SalesEngine } from './SalesEngine';
@@ -19,6 +19,11 @@ export function Sales() {
   const [params, setParams] = useSearchParams();
   const initial: Mode = params.get('m') === 'rec' ? 'recomendacoes' : 'campanhas';
   const [mode, setMode] = useState<Mode>(initial);
+
+  // Mantém as abas em sincronia com a URL (back/forward do navegador, deep links).
+  useEffect(() => {
+    setMode(params.get('m') === 'rec' ? 'recomendacoes' : 'campanhas');
+  }, [params]);
 
   const select = (m: Mode) => {
     setMode(m);
