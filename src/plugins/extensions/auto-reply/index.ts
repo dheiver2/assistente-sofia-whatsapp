@@ -33,6 +33,12 @@ const HISTORY_TURNS = () => Number(process.env.AI_HISTORY_TURNS ?? 8);
 // Janela para agrupar mensagens em rajada (responde uma vez quando o cliente para de digitar).
 const DEBOUNCE_MS = () => Number(process.env.AI_DEBOUNCE_MS ?? 3500);
 const PERSONAS_FILE = () => process.env.AI_PERSONAS_FILE ?? '/app/data/personas.json';
+// Handoff humano: por quanto tempo a IA fica em silêncio numa conversa depois que um humano
+// respondeu manualmente (renovado a cada mensagem do humano). Default 60 min.
+const HANDOFF_PAUSE_MS = () => Number(process.env.AI_HANDOFF_PAUSE_MS ?? 3_600_000);
+// Janela para reconhecer o "eco" de uma mensagem que a própria IA enviou (fromMe) e não
+// confundir com um humano assumindo a conversa.
+const AI_ECHO_WINDOW_MS = 25_000;
 const DEFAULT_PROMPT = () =>
   process.env.AI_SYSTEM_PROMPT ??
   'Você é uma assistente de atendimento via WhatsApp, simpática e prestativa. ' +
@@ -107,8 +113,21 @@ export class AutoReplyPlugin implements IPlugin {
   // Buffer por conversa: agrupa mensagens em rajada e responde UMA vez (evita respostas duplicadas
   // e apresentações repetidas quando o cliente manda várias mensagens seguidas).
   private readonly bursts = new Map<string, PendingBurst>();
+  // Handoff humano: enquanto Date.now() < valor, a IA fica em silêncio nessa conversa (key).
+  private readonly humanPausedUntil = new Map<string, number>();
+  // Textos enviados recentemente pela própria IA, por conversa — usados para reconhecer o "eco"
+  // fromMe da IA e NÃO confundir com um humano respondendo manualmente.
+  private readonly aiSentRecent = new Map<string, { text: string; at: number }[]>();
 
   constructor(private readonly resolveSession?: SessionResolver) {}
+
+  /** Registra um texto enviado pela própria IA (para distinguir do humano no eco fromMe). */
+  private recordAiSent(key: string, text: string): void {
+    const now = Date.now();
+    const list = (this.aiSentRecent.get(key) ?? []).filter(r => now - r.at < AI_ECHO_WINDOW_MS);
+    list.push({ text: text.trim(), at: now });
+    this.aiSentRecent.set(key, list);
+  }
 
   onEnable(context: PluginContext): Promise<void> {
     context.registerHook('message:received', ctx =>
@@ -126,6 +145,8 @@ export class AutoReplyPlugin implements IPlugin {
       clearTimeout(burst.timer);
     }
     this.bursts.clear();
+    this.humanPausedUntil.clear();
+    this.aiSentRecent.clear();
     context.logger.log('AI auto-reply disabled — pending burst timers cleared');
     return Promise.resolve();
   }
@@ -217,15 +238,39 @@ export class AutoReplyPlugin implements IPlugin {
   private onMessage(context: PluginContext, ctx: HookContext<IncomingMessage>): HookResult {
     const message = ctx.data;
 
-    // Reply only to inbound, engine-originated messages; never to our own sends or groups.
-    if (ctx.source !== 'Engine' || !ctx.sessionId || message.fromMe || message.isGroup) {
+    if (ctx.source !== 'Engine' || !ctx.sessionId) {
       return { continue: true };
     }
 
-    // Respond ONLY to genuine 1:1 chats. `isGroup` doesn't catch channels/newsletters/broadcasts
-    // (and some engines don't flag @g.us groups reliably), so gate on the chat JID suffix — otherwise
-    // the bot replies to (and spams) groups/channels/status, which also floods Ollama on connect-sync.
-    if (!/@(c\.us|s\.whatsapp\.net|lid)$/.test(message.chatId ?? '')) {
+    const chatId = message.chatId ?? '';
+    // Only individual 1:1 chats matter for auto-reply (and for handoff). `isGroup` doesn't catch
+    // channels/newsletters/broadcasts, so gate on the chat JID suffix.
+    const isIndividual = /@(c\.us|s\.whatsapp\.net|lid)$/.test(chatId);
+    const sessionId = ctx.sessionId;
+    const key = this.historyKey(sessionId, chatId);
+
+    // ── HANDOFF HUMANO ──────────────────────────────────────────────────────
+    // Uma mensagem fromMe que a IA NÃO enviou = um humano respondeu manualmente no WhatsApp.
+    // Pausamos a IA nessa conversa para nunca falar por cima do humano. Vale em qualquer sessão.
+    if (message.fromMe) {
+      if (isIndividual) {
+        const body = (message.body ?? '').trim();
+        const recents = this.aiSentRecent.get(key) ?? [];
+        const idx = recents.findIndex(r => r.text === body && Date.now() - r.at < AI_ECHO_WINDOW_MS);
+        if (idx >= 0) {
+          recents.splice(idx, 1); // é o eco da própria IA — ignora
+        } else {
+          // Humano assumiu: silencia a IA e cancela qualquer resposta pendente nessa conversa.
+          this.humanPausedUntil.set(key, Date.now() + HANDOFF_PAUSE_MS());
+          const pending = this.bursts.get(key);
+          if (pending) { clearTimeout(pending.timer); this.bursts.delete(key); }
+          context.logger.log('Auto-reply pausado (humano assumiu a conversa)', { sessionId, chatId });
+        }
+      }
+      return { continue: true };
+    }
+
+    if (message.isGroup || !isIndividual) {
       return { continue: true };
     }
 
@@ -234,11 +279,13 @@ export class AutoReplyPlugin implements IPlugin {
       return { continue: true };
     }
 
+    // Se um humano está conduzindo esta conversa, a IA fica em silêncio.
+    if (Date.now() < (this.humanPausedUntil.get(key) ?? 0)) {
+      return { continue: true };
+    }
+
     // Agrupa mensagens em rajada por conversa: reinicia o timer a cada nova mensagem e só
     // responde quando o cliente "para de digitar" por DEBOUNCE_MS — uma resposta por rajada.
-    const sessionId = ctx.sessionId;
-    const chatId = message.chatId;
-    const key = this.historyKey(sessionId, chatId);
     const existing = this.bursts.get(key);
     if (existing) {
       clearTimeout(existing.timer);
@@ -266,6 +313,9 @@ export class AutoReplyPlugin implements IPlugin {
     const userText = burst.texts.join('\n').trim();
     if (!userText) return;
 
+    // Um humano pode ter assumido durante a janela de debounce — não fale por cima dele.
+    if (Date.now() < (this.humanPausedUntil.get(key) ?? 0)) return;
+
     try {
       const profile = await this.resolveProfile(sessionId);
       if (!profile.enabled) return; // IA desligada para esta empresa/sessão
@@ -273,6 +323,7 @@ export class AutoReplyPlugin implements IPlugin {
       // Business hours check
       if (profile.ai?.businessHours?.enabled && !isWithinBusinessHours(profile.ai.businessHours)) {
         const outsideMsg = profile.ai.businessHours.outsideMessage ?? 'Nosso atendimento está fora do horário. Retornaremos em breve!';
+        this.recordAiSent(key, outsideMsg);
         await context.messages.reply(sessionId, chatId, burst.lastMessageId, outsideMsg);
         return;
       }
@@ -285,12 +336,17 @@ export class AutoReplyPlugin implements IPlugin {
         reply = await this.generate(profile.model, profile.systemPrompt, history, userText);
       } catch (aiErr) {
         context.logger.warn('AI generation failed; sending fallback', { error: String(aiErr) });
+        this.recordAiSent(key, FALLBACK);
         await context.messages.reply(sessionId, chatId, burst.lastMessageId, FALLBACK);
         return; // não grava fallback no histórico
       }
 
+      // Recheca o pause logo antes do envio (a geração no LLM pode levar segundos).
+      if (Date.now() < (this.humanPausedUntil.get(key) ?? 0)) return;
+
       // Saudação inicial fixa: prefixa a primeira resposta da conversa.
       const outbound = firstContact && profile.greeting ? `${profile.greeting}\n\n${reply}` : reply;
+      this.recordAiSent(key, outbound);
       await context.messages.reply(sessionId, chatId, burst.lastMessageId, outbound);
 
       history.push({ role: 'user', content: userText }, { role: 'assistant', content: reply });
