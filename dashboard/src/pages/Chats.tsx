@@ -4,7 +4,6 @@ import {
   Search,
   Send,
   Loader2,
-  User,
   Users,
   AlertCircle,
   MessageSquare,
@@ -13,6 +12,10 @@ import {
   X,
   CornerUpLeft,
   Trash2,
+  Phone,
+  Tag,
+  Bot,
+  Hash,
 } from 'lucide-react';
 import {
   sessionApi,
@@ -29,7 +32,6 @@ import { useWebSocket } from '../hooks/useWebSocket';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useRole } from '../hooks/useRole';
 import { useToast } from '../components/Toast';
-import { PageHeader } from '../components/PageHeader';
 import './Chats.css';
 
 type MessageMedia = { mimetype: string; filename?: string; data?: string };
@@ -91,6 +93,21 @@ const getMediaSrc = (media?: MessageMedia): string => {
     return media.data;
   }
   return `data:${media.mimetype};base64,${media.data}`;
+};
+
+// Deterministic avatar color + initials from a contact name/id — mirrors how Respond.io renders
+// colourful contact avatars instead of a generic icon.
+const AVATAR_COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#8b5cf6', '#14b8a6'];
+const avatarColor = (key: string): string => {
+  let h = 0;
+  for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) >>> 0;
+  return AVATAR_COLORS[h % AVATAR_COLORS.length];
+};
+const avatarInitials = (name: string): string => {
+  const parts = name.trim().split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+  if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+  return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 };
 
 export function Chats() {
@@ -655,9 +672,7 @@ export function Chats() {
   });
 
   return (
-    <div className="chats-page">
-      <PageHeader title={t('nav.chats')} subtitle={t('chats.subtitle')} />
-
+    <div className="chats-page inbox-page">
       {/* Real-time connection permanently dropped — let the user re-establish it instead of
           silently showing stale chats. */}
       {connectionFailed && (
@@ -687,29 +702,29 @@ export function Chats() {
           </p>
         </div>
       ) : (
-        <div className="chats-layout">
-          {/* LEFT SIDEBAR: session & chat rooms */}
-          <aside className="chats-sidebar">
-            <div className="sidebar-header-box">
-              {/* Session selector */}
-              <div className="session-select-group">
-                <label className="form-label">{t('chats.sessionLabel')}</label>
-                <select
-                  value={selectedSessionId}
-                  onChange={e => setSelectedSessionId(e.target.value)}
-                  className="session-selector"
-                >
-                  {sessions.map(s => (
-                    <option key={s.id} value={s.id}>
-                      {s.name} ({s.phone || t('chats.noPhone')})
-                    </option>
-                  ))}
-                </select>
+        <div className="inbox-layout">
+          {/* LEFT COLUMN: session selector, search, filters + conversation list */}
+          <aside className="inbox-list">
+            <div className="inbox-list-header">
+              <div className="inbox-list-title">
+                <h2>{t('nav.chats')}</h2>
+                <span className="inbox-count">{filteredChats.length}</span>
               </div>
+              <select
+                value={selectedSessionId}
+                onChange={e => setSelectedSessionId(e.target.value)}
+                className="inbox-session-select"
+                aria-label={t('chats.sessionLabel')}
+              >
+                {sessions.map(s => (
+                  <option key={s.id} value={s.id}>
+                    {s.name} ({s.phone || t('chats.noPhone')})
+                  </option>
+                ))}
+              </select>
 
-              {/* Search bar */}
-              <div className="chat-search-input">
-                <Search size={18} />
+              <div className="inbox-search">
+                <Search size={16} />
                 <input
                   type="text"
                   placeholder={t('chats.searchPlaceholder')}
@@ -717,27 +732,25 @@ export function Chats() {
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
+
+              <div className="inbox-filter-tabs">
+                {(['all', 'open', 'pending', 'resolved'] as const).map(f => (
+                  <button
+                    key={f}
+                    type="button"
+                    className={`inbox-filter-tab ${statusFilter === f ? 'active' : ''} tab-${f}`}
+                    onClick={() => setStatusFilter(f)}
+                  >
+                    {f === 'all' && t('chats.filter.all', 'Todas')}
+                    {f === 'open' && t('chats.filter.open', 'Abertas')}
+                    {f === 'pending' && t('chats.filter.pending', 'Pendentes')}
+                    {f === 'resolved' && t('chats.filter.resolved', 'Resolvidas')}
+                  </button>
+                ))}
+              </div>
             </div>
 
-            {/* Status filter pills */}
-            <div className="chat-status-filter-bar">
-              {(['all', 'open', 'pending', 'resolved'] as const).map(f => (
-                <button
-                  key={f}
-                  type="button"
-                  className={`status-filter-pill ${statusFilter === f ? 'active' : ''} pill-${f}`}
-                  onClick={() => setStatusFilter(f)}
-                >
-                  {f === 'all' && t('chats.filter.all', 'Todas')}
-                  {f === 'open' && `🟢 ${t('chats.filter.open', 'Abertas')}`}
-                  {f === 'pending' && `🟡 ${t('chats.filter.pending', 'Pendentes')}`}
-                  {f === 'resolved' && `✅ ${t('chats.filter.resolved', 'Resolvidas')}`}
-                </button>
-              ))}
-            </div>
-
-            {/* Chat list */}
-            <div className="chats-list">
+            <div className="inbox-list-scroll">
               {loadingChats ? (
                 <div className="chats-list-loading">
                   <Loader2 className="animate-spin" size={24} />
@@ -745,38 +758,43 @@ export function Chats() {
                 </div>
               ) : filteredChats.length === 0 ? (
                 <div className="chats-list-empty">
+                  <MessageSquare size={28} />
                   <span>{t('chats.empty')}</span>
                 </div>
               ) : (
                 filteredChats.map(chat => {
                   const isActive = activeChat?.id === chat.id;
+                  const displayName = chat.name || chat.id.split('@')[0];
+                  const status = chatStatus[chat.id] ?? 'open';
                   return (
                     <div
                       key={chat.id}
-                      className={`chat-item-card ${isActive ? 'active' : ''}`}
+                      className={`inbox-item ${isActive ? 'active' : ''}`}
                       onClick={() => setActiveChat(chat)}
                     >
-                      <div className="chat-avatar">
-                        {chat.isGroup ? <Users size={20} /> : <User size={20} />}
+                      <div
+                        className="inbox-avatar"
+                        style={{ background: chat.isGroup ? 'var(--text-muted)' : avatarColor(chat.id) }}
+                      >
+                        {chat.isGroup ? <Users size={18} /> : avatarInitials(displayName)}
+                        <span className={`inbox-avatar-status status-${status}`} />
                       </div>
 
-                      <div className="chat-item-info">
-                        <div className="chat-item-top">
-                          <span className="chat-item-name" title={chat.name || chat.id}>
-                            {chat.name || chat.id.split('@')[0]}
-                          </span>
+                      <div className="inbox-item-body">
+                        <div className="inbox-item-top">
+                          <span className="inbox-item-name" title={displayName}>{displayName}</span>
                           {chat.timestamp && (
-                            <span className="chat-item-time">{formatChatTime(chat.timestamp)}</span>
+                            <span className="inbox-item-time">{formatChatTime(chat.timestamp)}</span>
                           )}
                         </div>
-                        <div className="chat-item-bottom">
-                          <span className="chat-item-snippet" title={formatLastMessageSnippet(chat)}>
+                        <div className="inbox-item-bottom">
+                          <span className="inbox-item-snippet" title={formatLastMessageSnippet(chat)}>
                             {formatLastMessageSnippet(chat) || (
                               <span className="no-message">{t('chats.noMessageYet')}</span>
                             )}
                           </span>
                           {chat.unreadCount > 0 && (
-                            <span className="chat-unread-badge">{chat.unreadCount}</span>
+                            <span className="inbox-unread-badge">{chat.unreadCount}</span>
                           )}
                         </div>
                       </div>
@@ -787,39 +805,24 @@ export function Chats() {
             </div>
           </aside>
 
-          {/* RIGHT VIEW: active chat room */}
+          {/* CENTER: active chat room */}
           <main className="chats-room">
             {activeChat ? (
               <div className="room-container">
                 {/* Room header */}
                 <header className="room-header">
-                  <div className="room-avatar">
-                    {activeChat.isGroup ? <Users size={20} /> : <User size={20} />}
+                  <div
+                    className="room-avatar"
+                    style={{ background: activeChat.isGroup ? 'var(--text-muted)' : avatarColor(activeChat.id) }}
+                  >
+                    {activeChat.isGroup ? <Users size={18} /> : avatarInitials(activeChat.name || activeChat.id.split('@')[0])}
                   </div>
                   <div className="room-contact-info">
                     <h3>{activeChat.name || activeChat.id.split('@')[0]}</h3>
-                    <span>{activeChat.id}</span>
-                  </div>
-                  <div className="room-status-actions">
-                    {(['open', 'pending', 'resolved'] as const).map(s => {
-                      const current = chatStatus[activeChat.id] ?? 'open';
-                      const labels: Record<string, string> = {
-                        open: `🟢 ${t('chats.status.open', 'Aberta')}`,
-                        pending: `🟡 ${t('chats.status.pending', 'Pendente')}`,
-                        resolved: `✅ ${t('chats.status.resolved', 'Resolvida')}`,
-                      };
-                      return (
-                        <button
-                          key={s}
-                          type="button"
-                          className={`room-status-btn status-${s} ${current === s ? 'active' : ''}`}
-                          onClick={() => void handleSetChatStatus(s)}
-                          title={labels[s]}
-                        >
-                          {labels[s]}
-                        </button>
-                      );
-                    })}
+                    <span>
+                      <span className={`room-status-dot status-${chatStatus[activeChat.id] ?? 'open'}`} />
+                      {activeChat.isGroup ? t('chats.groupChat', 'Grupo') : (activeChat.id.split('@')[0])}
+                    </span>
                   </div>
                 </header>
 
@@ -1170,6 +1173,85 @@ export function Chats() {
               </div>
             )}
           </main>
+
+          {/* RIGHT COLUMN: contact / conversation details panel */}
+          {activeChat && (
+            <aside className="inbox-contact">
+              <div className="contact-hero">
+                <div
+                  className="contact-hero-avatar"
+                  style={{ background: activeChat.isGroup ? 'var(--text-muted)' : avatarColor(activeChat.id) }}
+                >
+                  {activeChat.isGroup ? <Users size={28} /> : avatarInitials(activeChat.name || activeChat.id.split('@')[0])}
+                </div>
+                <h3 className="contact-hero-name">{activeChat.name || activeChat.id.split('@')[0]}</h3>
+                <span className="contact-hero-sub">
+                  {activeChat.isGroup ? t('chats.groupChat', 'Grupo') : activeChat.id.split('@')[0]}
+                </span>
+              </div>
+
+              {/* Conversation status */}
+              <div className="contact-section">
+                <span className="contact-section-label">{t('chats.statusLabel', 'Status da conversa')}</span>
+                <div className="contact-status-group">
+                  {(['open', 'pending', 'resolved'] as const).map(s => {
+                    const current = chatStatus[activeChat.id] ?? 'open';
+                    const labels: Record<string, string> = {
+                      open: t('chats.status.open', 'Aberta'),
+                      pending: t('chats.status.pending', 'Pendente'),
+                      resolved: t('chats.status.resolved', 'Resolvida'),
+                    };
+                    return (
+                      <button
+                        key={s}
+                        type="button"
+                        className={`contact-status-btn status-${s} ${current === s ? 'active' : ''}`}
+                        onClick={() => void handleSetChatStatus(s)}
+                      >
+                        <span className={`room-status-dot status-${s}`} />
+                        {labels[s]}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Contact details */}
+              <div className="contact-section">
+                <span className="contact-section-label">{t('chats.detailsLabel', 'Detalhes')}</span>
+                <ul className="contact-detail-list">
+                  <li>
+                    <Phone size={15} />
+                    <span>{activeChat.id.split('@')[0]}</span>
+                  </li>
+                  <li>
+                    <Hash size={15} />
+                    <span className="contact-detail-mono">{activeChat.id}</span>
+                  </li>
+                  <li>
+                    <MessageSquare size={15} />
+                    <span>{sessions.find(s => s.id === selectedSessionId)?.name ?? '—'}</span>
+                  </li>
+                </ul>
+              </div>
+
+              {/* Labels (placeholder for future tagging) */}
+              <div className="contact-section">
+                <span className="contact-section-label">{t('chats.labelsLabel', 'Etiquetas')}</span>
+                <div className="contact-labels">
+                  <span className="contact-label-chip">
+                    <Tag size={12} /> {activeChat.isGroup ? t('chats.groupChat', 'Grupo') : t('chats.labelLead', 'Lead')}
+                  </span>
+                </div>
+              </div>
+
+              {/* AI auto-reply hint */}
+              <div className="contact-ai-note">
+                <Bot size={16} />
+                <span>{t('chats.aiNote', 'Respostas automáticas da IA seguem a persona configurada na sessão.')}</span>
+              </div>
+            </aside>
+          )}
         </div>
       )}
     </div>
