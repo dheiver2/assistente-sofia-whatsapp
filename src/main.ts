@@ -207,6 +207,25 @@ async function bootstrap() {
   // Global prefix
   app.setGlobalPrefix('api');
 
+  // SPA fallback: rotas internas do dashboard (ex.: /pedidos, /conversas) devolvem o index.html
+  // para o roteamento client-side funcionar ao abrir/atualizar direto. O serve-static (Express 5)
+  // serve a raiz e os assets, mas não o coringa do SPA — este middleware cobre isso. Mantém
+  // /api e /socket.io fora e ignora caminhos com extensão (assets reais).
+  if (dashboardServingEnabled && dashboardBuildPresent) {
+    app.use((req: Request, res: Response, next: NextFunction) => {
+      if (req.method !== 'GET' && req.method !== 'HEAD') return next();
+      const p = req.path;
+      if (p.startsWith('/api') || p.startsWith('/socket.io')) return next();
+      if (p.includes('.')) return next(); // arquivo estático (js/css/img) → serve-static
+      if (!(req.headers.accept ?? '').includes('text/html')) return next();
+      // Serve relativo à root (como o serve-static): o caminho absoluto da root pode conter um
+      // diretório oculto (ex.: .claude/worktrees) que o `send` rejeitaria por dotfiles.
+      return res.sendFile('index.html', { root: DASHBOARD_DIST, dotfiles: 'allow' }, err => {
+        if (err) next();
+      });
+    });
+  }
+
   // Enhanced Validation pipe with security options
   app.useGlobalPipes(
     new ValidationPipe({
