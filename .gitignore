@@ -81,3 +81,6 @@ _docs/
 
 # Stray SQLite db accidentally created at repo root
 /openwa
+
+# pm2 logs do deploy local
+deploy/logs/
