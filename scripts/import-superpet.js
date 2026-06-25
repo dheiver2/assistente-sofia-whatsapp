@@ -12,7 +12,7 @@ const ROOT = path.resolve(__dirname, '..');
 const DB = path.join(ROOT, 'openwa');
 const XLSX = process.argv[2] || '/Users/dheiver/Downloads/bi_global_230626 (1).xlsx';
 const SESSION = 'c56f20a9-2448-4153-bfa5-f4c0208535dd'; // super-pet
-const MAX_PRODUCTS = 150;
+const MAX_PRODUCTS = 5000; // catálogo completo; o matching pré-filtra por interesse (pool de 50)
 const MAX_PURCHASES_PER_CUST = 30;
 
 const titleCase = s => String(s || '').toLowerCase().replace(/\b\w/g, c => c.toUpperCase()).replace(/\bE\b/g, 'e').trim();
