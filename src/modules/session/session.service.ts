@@ -23,6 +23,8 @@ import {
   ReactionEvent,
 } from '../../engine/interfaces/whatsapp-engine.interface';
 import { createLogger } from '../../common/services/logger.service';
+import { existsSync, rmSync } from 'fs';
+import { join } from 'path';
 import { EventsGateway } from '../events/events.gateway';
 import { WebhookService } from '../webhook/webhook.service';
 import { HookManager } from '../../core/hooks';
@@ -950,6 +952,40 @@ export class SessionService implements OnModuleDestroy, OnModuleInit, OnApplicat
       sessionId: id,
       action: 'stop',
     });
+    await this.updateStatus(id, SessionStatus.DISCONNECTED);
+    return this.findOne(id);
+  }
+
+  /**
+   * Logout completo (trocar número): desvincula o número no WhatsApp E apaga as credenciais salvas,
+   * para que o próximo start() gere um QR NOVO. Diferente de stop(), que mantém as credenciais e
+   * reconecta o MESMO número. Modela o lifecycle de stop() (stop-mark + cancel-reconnect + teardown).
+   */
+  async logout(id: string): Promise<Session> {
+    const session = await this.findOne(id);
+
+    this.stoppingSessions.add(id);
+    this.cancelReconnect(id);
+
+    const engine = this.engines.get(id);
+    if (engine) {
+      // logout() do engine desvincula o dispositivo no WhatsApp; teardown isolado e time-bounded.
+      await this.teardownEngineSafely(id, engine, e => e.logout(), 'disconnect');
+      this.engines.delete(id);
+    }
+
+    // Remove as credenciais multi-arquivo desta sessão (o adapter Baileys as preserva de propósito).
+    try {
+      const authBase = process.env.BAILEYS_AUTH_DIR ?? './data/baileys';
+      const dir = join(authBase, id);
+      if (existsSync(dir)) rmSync(dir, { recursive: true, force: true });
+    } catch (err) {
+      this.logger.warn('Falha ao limpar credenciais da sessão no logout', { sessionId: id, error: String(err) });
+    }
+
+    // Zera o telefone vinculado para não exibir o número antigo.
+    await this.sessionRepository.update(id, { phone: null });
+    this.logger.log(`Session logged out (credenciais limpas): ${session.name}`, { sessionId: id, action: 'logout' });
     await this.updateStatus(id, SessionStatus.DISCONNECTED);
     return this.findOne(id);
   }

@@ -332,6 +332,30 @@ export function Sessions() {
     }
   };
 
+  // Trocar número: faz logout (desvincula + limpa credenciais) e inicia para gerar um QR NOVO.
+  // Um "Desconectar" comum mantém as credenciais e reconecta o MESMO número.
+  const handleSwitchNumber = async (id: string) => {
+    setActionBusy(id);
+    try {
+      await sessionApi.logout(id);
+      if (qrData?.sessionId === id) setQrData(null);
+    } catch (err) {
+      toast.error(
+        t('sessions.switchNumber.errorTitle', { defaultValue: 'Erro ao trocar número' }),
+        err instanceof Error ? err.message : undefined,
+      );
+      fetchSessions();
+      setActionBusy(null);
+      return;
+    }
+    setActionBusy(null);
+    toast.success(
+      t('sessions.switchNumber.successTitle', { defaultValue: 'Número desvinculado' }),
+      t('sessions.switchNumber.success', { defaultValue: 'Gerando um novo QR para conectar outro número…' }),
+    );
+    await handleStart(id); // abre o modal com o QR novo
+  };
+
   const handleForceKill = async (id: string) => {
     try {
       await sessionApi.forceKill(id);
@@ -1021,6 +1045,17 @@ export function Sessions() {
                     {t('sessions.actions.reconnect')}
                   </button>
                 ) : null}
+                {canWrite && ['ready', 'connecting', 'qr_ready', 'disconnected', 'failed'].includes(session.status) && (
+                  <button
+                    className="btn-action"
+                    title="Desvincula o número atual e gera um novo QR para conectar outro número"
+                    onClick={() => handleSwitchNumber(session.id)}
+                    disabled={actionBusy === session.id}
+                  >
+                    <QrCode size={16} />
+                    {t('sessions.actions.switchNumber', { defaultValue: 'Trocar número' })}
+                  </button>
+                )}
                 {canWrite && (
                   <button className="btn-action danger" onClick={() => setDeleteConfirmId(session.id)}>
                     <Trash2 size={16} />

@@ -167,6 +167,21 @@ export class SessionController {
     return this.transformSession(session);
   }
 
+  @Post(':id/logout')
+  @RequireRole(ApiKeyRole.OPERATOR)
+  @ApiOperation({ summary: 'Logout (trocar número): desvincula o número e limpa as credenciais para gerar QR novo' })
+  @ApiParam({ name: 'id', description: 'Session ID' })
+  @ApiResponse({ status: 200, description: 'Session logged out (credenciais limpas)', type: SessionResponseDto })
+  @ApiResponse({ status: 404, description: 'Session not found' })
+  async logout(@Param('id') id: string): Promise<SessionResponseDto> {
+    const session = await this.sessionService.logout(id);
+    await this.auditService.logInfo(AuditAction.SESSION_STOPPED, {
+      sessionId: session.id,
+      sessionName: session.name,
+    });
+    return this.transformSession(session);
+  }
+
   @Post(':id/force-kill')
   @RequireRole(ApiKeyRole.OPERATOR)
   @ApiOperation({ summary: 'Force-kill a stuck session (SIGKILL its wedged engine, then tear it down)' })
