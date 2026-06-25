@@ -26,6 +26,10 @@ export const WEBHOOK_EVENTS = [
   'session.qr',
   'session.authenticated',
   'session.disconnected',
+  // Pedidos: a IA fechou um pedido na conversa (order.created) ou somou um upsell (order.updated).
+  // Permite integrar o ERP/PDV/BI da loja para registrar a venda automaticamente.
+  'order.created',
+  'order.updated',
   // Reserved: accepted on subscribe but not dispatched yet (no engine emit source).
   'group.join',
   'group.leave',

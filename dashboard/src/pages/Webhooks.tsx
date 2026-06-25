@@ -38,6 +38,8 @@ const availableEventNames = [
   'session.qr',
   'session.authenticated',
   'session.disconnected',
+  'order.created',
+  'order.updated',
   'group.join',
   'group.leave',
   'group.update',

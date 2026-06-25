@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Order, OrderItem, OrderSource, OrderStatus } from './entities/order.entity';
 import { EventsGateway } from '../events/events.gateway';
+import { WebhookService } from '../webhook/webhook.service';
 
 export interface CreateOrderInput {
   sessionId: string;
@@ -23,7 +24,25 @@ export class OrdersService {
   constructor(
     @InjectRepository(Order, 'data') private readonly repo: Repository<Order>,
     private readonly events: EventsGateway,
+    private readonly webhooks: WebhookService,
   ) {}
+
+  /** Payload comum para WebSocket e webhook (ERP/PDV/BI da loja). */
+  private orderPayload(o: Order): Record<string, unknown> {
+    return {
+      orderId: o.id,
+      phone: o.phone,
+      customerName: o.customerName,
+      total: Number(o.total),
+      itemCount: o.items.length,
+      items: o.items,
+      status: o.status,
+      source: o.source,
+      reference: o.reference,
+      placedAt: o.placedAt,
+      createdAt: o.createdAt,
+    };
+  }
 
   private computeTotal(items: OrderItem[]): number {
     return +(items ?? []).reduce((sum, i) => sum + (Number(i.qtd) || 0) * (Number(i.preco) || 0), 0).toFixed(2);
@@ -44,19 +63,15 @@ export class OrdersService {
       placedAt: input.placedAt ?? new Date(),
     });
     const saved = await this.repo.save(order);
+    const payload = this.orderPayload(saved);
 
     // Notifica a plataforma (toast + badge) quando um pedido NOVO chega pela conversa.
     if (input.notify !== false && saved.status === 'novo') {
-      this.events.emitOrderCreated(saved.sessionId, {
-        orderId: saved.id,
-        phone: saved.phone,
-        customerName: saved.customerName,
-        total: saved.total,
-        itemCount: saved.items.length,
-        items: saved.items,
-        source: saved.source,
-        createdAt: saved.createdAt,
-      });
+      this.events.emitOrderCreated(saved.sessionId, payload);
+    }
+    // Webhook order.created → integra o ERP/PDV/BI da loja (registra a venda automaticamente).
+    if (input.notify !== false) {
+      void this.webhooks.dispatch(saved.sessionId, 'order.created', payload);
     }
     return saved;
   }
@@ -115,7 +130,10 @@ export class OrdersService {
       order.total = this.computeTotal(order.items);
     }
     if (patch.notes !== undefined) order.notes = patch.notes;
-    return this.repo.save(order);
+    const saved = await this.repo.save(order);
+    // Mudança no pedido (status confirmar/concluir, edição de itens) → notifica ERP/PDV via webhook.
+    void this.webhooks.dispatch(saved.sessionId, 'order.updated', { ...this.orderPayload(saved), updated: true });
+    return saved;
   }
 
   /** Adiciona itens a um pedido existente (upsell aceito após a recomendação) e re-notifica. */
@@ -130,16 +148,9 @@ export class OrdersService {
     order.items = merged;
     order.total = this.computeTotal(merged);
     const saved = await this.repo.save(order);
-    this.events.emitOrderCreated(saved.sessionId, {
-      orderId: saved.id,
-      phone: saved.phone,
-      customerName: saved.customerName,
-      total: saved.total,
-      itemCount: saved.items.length,
-      items: saved.items,
-      source: saved.source,
-      updated: true,
-    });
+    const payload = { ...this.orderPayload(saved), updated: true };
+    this.events.emitOrderCreated(saved.sessionId, payload);
+    void this.webhooks.dispatch(saved.sessionId, 'order.updated', payload);
     return saved;
   }
 
