@@ -79,7 +79,9 @@
       "support": "Atendimento",
       "growth": "Crescimento",
       "connections": "Conexões",
-      "system": "Sistema"
+      "system": "Sistema",
+      "attendance": "Atendimento",
+      "setup": "Configuração"
     },
     "orders": "Pedidos"
   },

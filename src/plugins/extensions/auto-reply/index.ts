@@ -106,6 +106,8 @@ export interface CommerceHooks {
   }): Promise<{ id: string; total: number }>;
   /** Soma itens a um pedido existente (upsell aceito após a recomendação). Retorna id + total. */
   appendOrder(orderId: string, items: ResolvedOrderItem[]): Promise<{ id: string; total: number }>;
+  /** Salva o perfil do pet descoberto na conversa (espécie/porte) no contato — enriquece o lead novo. */
+  saveContactProfile(sessionId: string, phone: string, profile: { especie?: string; porte?: string }): Promise<void>;
 }
 
 /** Bloco estruturado que a IA emite ao fim de cada resposta (removido antes de enviar ao cliente). */
@@ -113,6 +115,8 @@ interface PedidoBlock {
   intent?: string;
   itens?: OrderItemDescriptor[];
   confirmado?: boolean;
+  sentimento?: string; // 'neutro' | 'negativo'
+  perfilPet?: { especie?: string; porte?: string };
   handoff?: { necessario?: boolean; motivo?: string };
 }
 
@@ -138,12 +142,24 @@ COMO ATENDER (loja — venda consultiva em 3 estágios, sem menu "digite 1"):
 2) FECHAR: monte o pedido e confirme itens e quantidades. Você NUNCA inventa preço nem nome exato de produto — descreva o item no bloco <pedido> e só fale o valor DEPOIS que o sistema confirmar; se ainda não souber, diga "já te confirmo o valor certinho".
 3) RECOMENDAR: só DEPOIS que o cliente confirmar o pedido, ofereça UM complemento que combine e lembre a próxima reposição. Não insista se ele recusar.
 
-HANDOFF: se for sintoma/doença do pet, urgência, reclamação séria, negociação de preço ou pedido de falar com humano — não tente resolver nem vender; diga que vai passar para a equipe (que já tem todo o contexto, o cliente não repete nada) e marque handoff no bloco. Em saúde, jamais minimize.
+PREÇO E PRODUTO: NUNCA invente preço, nome exato de produto nem código — descreva o item no bloco e deixe o sistema confirmar. Ofereça no máximo UMA sugestão por mensagem e não insista se a pessoa recusar.
+
+SAÚDE (regra rígida): você NÃO dá conselho clínico nem diagnóstico. Sintoma, doença, urgência, dúvida sobre vacina/vermífugo/medicação → apenas acolha, ajude a AGENDAR e marque handoff. Jamais minimize um problema de saúde.
+
+HANDOFF: saúde, reclamação séria, cliente irritado/insatisfeito, negociação de preço ou pedido de falar com humano — não tente vender; diga com empatia que vai passar para a equipe (que já tem todo o contexto, o cliente não repete nada) e marque handoff no bloco.
 
 Ao FINAL de CADA resposta, acrescente UM bloco <pedido>...</pedido> em JSON (o cliente NÃO vê). Use SEMPRE exatamente estas chaves:
-<pedido>{"intent":"repor_consumivel|comprar_produto|agendar_banho_tosa|agendar_vet_vacina|confirmar_pedido|ajustar_carrinho|duvida|falar_com_humano|nenhum","itens":[{"descricao":"","categoria":"","marca":"","qtd":1}],"confirmado":false,"handoff":{"necessario":false,"motivo":""}}</pedido>
-"confirmado" só é true quando o cliente confirmar claramente ("confirma","pode mandar","isso","fechado"). Sem ação, use "intent":"nenhum" e "itens":[].
-Exemplo — cliente: "quero 2 sacos da golden 15kg pro thor" → <pedido>{"intent":"repor_consumivel","itens":[{"descricao":"Ração Golden 15kg","categoria":"RACAO","marca":"Golden","qtd":2}],"confirmado":false,"handoff":{"necessario":false,"motivo":""}}</pedido>`;
+<pedido>{"intent":"repor_consumivel|comprar_produto|agendar_banho_tosa|agendar_vet_vacina|confirmar_pedido|ajustar_carrinho|duvida|falar_com_humano|nenhum","itens":[{"descricao":"","categoria":"","marca":"","qtd":1}],"confirmado":false,"sentimento":"neutro","perfilPet":{"especie":"","porte":""},"handoff":{"necessario":false,"motivo":""}}</pedido>
+- "confirmado" só é true quando o cliente confirmar claramente ("confirma","pode mandar","isso","fechado").
+- "sentimento": use "negativo" se o cliente estiver irritado, frustrado ou insatisfeito; senão "neutro".
+- "perfilPet": preencha quando descobrir a espécie (cão/gato) e/ou porte (pequeno/médio/grande) do pet; senão deixe vazio.
+- Sem ação, use "intent":"nenhum" e "itens":[].
+Exemplo — cliente: "quero 2 sacos da golden 15kg pro thor" → <pedido>{"intent":"repor_consumivel","itens":[{"descricao":"Ração Golden 15kg","categoria":"RACAO","marca":"Golden","qtd":2}],"confirmado":false,"sentimento":"neutro","perfilPet":{"especie":"cão","porte":"grande"},"handoff":{"necessario":false,"motivo":""}}</pedido>`;
+
+// Anexada no PRIMEIRO contato de quem ainda não conhecemos (lead novo, sem histórico).
+const FIRST_CONTACT_DIRECTIVE = `
+
+PRIMEIRO CONTATO: você ainda não conhece este cliente nem o pet dele. Acolha com calor e, de forma natural, faça UMA única pergunta leve para conhecer o bichinho (qual é o pet, nome, porte) — sem interrogatório. Assim que souber, preencha "perfilPet" no bloco.`;
 
 function isWithinBusinessHours(bh: NonNullable<SessionAi['businessHours']>): boolean {
   if (!bh.enabled) return true;
@@ -372,10 +388,21 @@ export class AutoReplyPlugin implements IPlugin {
   ): Promise<void> {
     if (!this.commerce) return;
 
-    // Handoff sinalizado pela IA → silencia e não cria pedido (a equipe assume com o contexto).
-    if (pedido.handoff?.necessario || (pedido.intent && HANDOFF_INTENTS.has(pedido.intent))) {
+    // Perfil do pet descoberto na conversa → enriquece o contato (lead novo ganha espécie/porte).
+    const perfil = pedido.perfilPet;
+    if (perfil && (perfil.especie || perfil.porte)) {
+      void this.commerce.saveContactProfile(sessionId, phone, perfil).catch(() => {});
+    }
+
+    // Handoff: sinalizado pela IA, intent de escalonamento, OU sentimento negativo (protege a marca).
+    const negativo = String(pedido.sentimento).toLowerCase() === 'negativo';
+    if (pedido.handoff?.necessario || (pedido.intent && HANDOFF_INTENTS.has(pedido.intent)) || negativo) {
       this.humanPausedUntil.set(key, Date.now() + HANDOFF_PAUSE_MS());
-      context.logger.log('Handoff sinalizado pela IA', { sessionId, chatId, motivo: pedido.handoff?.motivo ?? pedido.intent });
+      context.logger.log('Handoff acionado', {
+        sessionId,
+        chatId,
+        motivo: pedido.handoff?.motivo ?? (negativo ? 'sentimento negativo' : pedido.intent),
+      });
       return;
     }
 
@@ -584,10 +611,12 @@ export class AutoReplyPlugin implements IPlugin {
       // Cliente conhecido: injeta o histórico/perfil para a IA personalizar e recomendar na conversa.
       let systemPrompt = profile.systemPrompt;
       let custName: string | null = null;
+      let hasContext = false;
       try {
         const cust = this.resolveContact && phone ? await this.resolveContact(sessionId, phone) : null;
         custName = cust?.name ?? null;
         if (cust?.aiContext) {
+          hasContext = true;
           systemPrompt +=
             `\n\nCLIENTE QUE ESTÁ FALANDO AGORA (dados reais do histórico — use com naturalidade para ` +
             `personalizar o atendimento e recomendar o que faz sentido; NÃO despeje tudo de uma vez, ` +
@@ -599,7 +628,11 @@ export class AutoReplyPlugin implements IPlugin {
 
       // Sessão de comércio (tem catálogo): liga o fluxo de venda consultiva em 3 estágios.
       const commerceOn = await this.commerceEnabled(sessionId);
-      if (commerceOn) systemPrompt += ORDER_FLOW_DIRECTIVES;
+      if (commerceOn) {
+        systemPrompt += ORDER_FLOW_DIRECTIVES;
+        // Lead novo (primeiro contato, sem histórico): boas-vindas com micro-qualificação do pet.
+        if (firstContact && !hasContext) systemPrompt += FIRST_CONTACT_DIRECTIVE;
+      }
 
       let reply: string;
       try {

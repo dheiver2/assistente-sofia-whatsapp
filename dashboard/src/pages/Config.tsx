@@ -13,9 +13,10 @@ import './Config.css';
 const Plugins = lazy(() => import('./Plugins'));
 
 const ALL_TABS = [
-  { id: 'webhooks', label: '🔗 Integrações', adminOnly: false },
-  { id: 'templates', label: '📝 Templates', adminOnly: false },
-  { id: 'logs', label: '📋 Logs', adminOnly: false },
+  // Integrações (webhooks) e Logs são técnicos → só admin. Operador vê só Modelos/Templates.
+  { id: 'webhooks', label: '🔗 Integrações', adminOnly: true },
+  { id: 'templates', label: '📝 Modelos', adminOnly: false },
+  { id: 'logs', label: '📋 Logs', adminOnly: true },
   { id: 'apikeys', label: '🔑 Chaves API', adminOnly: true },
   { id: 'plugins', label: '🧩 Plugins', adminOnly: true },
   { id: 'infra', label: '🖥️ Infraestrutura', adminOnly: true },

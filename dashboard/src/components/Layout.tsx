@@ -7,7 +7,7 @@ import {
   Home,
   Smartphone,
   MessageSquare,
-  Rocket,
+  Sparkles,
   Settings2,
   LogOut,
   Sun,
@@ -34,26 +34,26 @@ interface LayoutProps {
 type NavItem = { to: string; icon: typeof Home; key: string; adminOnly?: boolean };
 type NavGroup = { section: string; items: NavItem[] };
 
-// Grouped navigation — mirrors how messaging platforms (Chatwoot, Respond.io) organise the
-// sidebar by area instead of a flat list.
+// Navegação enxuta focada na jornada: tudo que é atendimento (recomendar É atender) numa seção só,
+// e a parte operacional (conta WhatsApp + ajustes) noutra.
 const navGroups: NavGroup[] = [
-  { section: 'general', items: [{ to: '/', icon: Home, key: 'home' }] },
   {
-    section: 'support',
+    section: 'attendance',
     items: [
+      { to: '/', icon: Home, key: 'home' },
       { to: '/conversas', icon: MessageSquare, key: 'chats' },
       { to: '/contatos', icon: Users, key: 'contacts' },
-    ],
-  },
-  {
-    section: 'growth',
-    items: [
-      { to: '/vendas', icon: Rocket, key: 'sales' },
+      { to: '/vendas', icon: Sparkles, key: 'recommendations' },
       { to: '/pedidos', icon: ShoppingBag, key: 'orders' },
     ],
   },
-  { section: 'connections', items: [{ to: '/sessoes', icon: Smartphone, key: 'sessions' }] },
-  { section: 'system', items: [{ to: '/config', icon: Settings2, key: 'config' }] },
+  {
+    section: 'setup',
+    items: [
+      { to: '/sessoes', icon: Smartphone, key: 'sessions' },
+      { to: '/config', icon: Settings2, key: 'config' },
+    ],
+  },
 ];
 
 const themeIcons = { light: Sun, dark: Moon, system: Monitor };

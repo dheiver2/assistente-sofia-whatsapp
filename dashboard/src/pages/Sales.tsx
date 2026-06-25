@@ -8,17 +8,29 @@ import './Sales.css';
 
 type Mode = 'campanhas' | 'recomendacoes';
 
+// Disparo em massa (campanhas) fica DESLIGADO por padrão: conflita com o foco humanizado 1:1 e é o
+// maior vetor de banimento do WhatsApp para uma loja única. Ligue com VITE_FEATURE_CAMPAIGNS=true.
+const CAMPAIGNS_ENABLED = import.meta.env.VITE_FEATURE_CAMPAIGNS === 'true';
+
 /**
- * Hub de Vendas — unifica os dois modos do mesmo objetivo (IA vende produto):
- *  - Campanhas: disparo em massa / proativo (lista → IA → dispara)
- *  - Recomendações: sugestão 1:1 / reativa (contato → multi-agente → sugere)
- * Reaproveita as páginas existentes embutidas (sem título próprio).
+ * Hub de Recomendações (1:1, reativo). Com campanhas habilitadas, vira um hub com as duas abas.
  */
 export function Sales() {
-  useDocumentTitle('Vendas');
+  useDocumentTitle('Recomendações');
   const [params, setParams] = useSearchParams();
   const initial: Mode = params.get('m') === 'rec' ? 'recomendacoes' : 'campanhas';
   const [mode, setMode] = useState<Mode>(initial);
+
+  // Padrão (campanhas off): só Recomendações 1:1, sem abas.
+  if (!CAMPAIGNS_ENABLED) {
+    return (
+      <div className="sales-hub">
+        <div className="sales-hub-body">
+          <Recommendations embedded />
+        </div>
+      </div>
+    );
+  }
 
   // Mantém as abas em sincronia com a URL (back/forward do navegador, deep links).
   useEffect(() => {

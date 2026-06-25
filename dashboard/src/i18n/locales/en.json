@@ -79,7 +79,9 @@
       "support": "Support",
       "growth": "Growth",
       "connections": "Connections",
-      "system": "System"
+      "system": "System",
+      "attendance": "Support",
+      "setup": "Setup"
     },
     "orders": "Orders"
   },

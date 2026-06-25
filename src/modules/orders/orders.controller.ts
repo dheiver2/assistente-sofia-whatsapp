@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { OrdersService } from './orders.service';
 import { Order } from './entities/order.entity';
@@ -54,6 +54,7 @@ export class OrdersController {
   }
 
   @Delete(':id')
+  @HttpCode(204)
   delete(@Param('id') id: string): Promise<void> {
     return this.svc.delete(id);
   }

@@ -106,6 +106,17 @@ export class ExtensionsRegistrar implements OnModuleInit {
         const order = await this.ordersService.appendItems(orderId, items);
         return { id: order.id, total: Number(order.total) };
       },
+      saveContactProfile: async (sessionId, phone, profile) => {
+        const c = await this.contactRepo.findOne({ where: { sessionId, phone } });
+        if (!c) return;
+        const attrs = { ...(c.attributes ?? {}) } as Record<string, unknown>;
+        const pet = { ...((attrs['petProfile'] as Record<string, unknown>) ?? {}) };
+        if (profile.especie) pet['species'] = profile.especie;
+        if (profile.porte) pet['size'] = profile.porte;
+        attrs['petProfile'] = pet;
+        c.attributes = attrs;
+        await this.contactRepo.save(c);
+      },
     };
 
     this.pluginLoader.registerBuiltInPlugin(autoReplyManifest, new AutoReplyPlugin(resolveSession, resolveContact, commerce));
