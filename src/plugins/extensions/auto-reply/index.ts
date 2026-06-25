@@ -104,6 +104,8 @@ export interface CommerceHooks {
     customerName?: string | null;
     items: ResolvedOrderItem[];
   }): Promise<{ id: string; total: number }>;
+  /** Soma itens a um pedido existente (upsell aceito após a recomendação). Retorna id + total. */
+  appendOrder(orderId: string, items: ResolvedOrderItem[]): Promise<{ id: string; total: number }>;
 }
 
 /** Bloco estruturado que a IA emite ao fim de cada resposta (removido antes de enviar ao cliente). */
@@ -119,11 +121,14 @@ interface CartState {
   items: ResolvedOrderItem[];
   lastHash: string;
   lastAt: number;
+  lastOrderId?: string; // último pedido criado nesta conversa (para somar upsell aceito)
 }
 
 // Confirmação explícita do cliente no texto (dupla checagem além do confirmado:true do LLM).
 const CONFIRM_RE = /\b(confirm[ao]|pode\s+(mandar|separar|ser|fechar|enviar)|isso\s*mesmo|fechado|quero\s+sim|é\s+isso|pode\s+sim|fecha)\b/i;
 const HANDOFF_INTENTS = new Set(['emergencia_saude', 'reclamacao', 'falar_com_humano', 'opt_out']);
+// Janela em que um novo "fechado" some no MESMO pedido (ex.: upsell aceito após a recomendação).
+const ORDER_MERGE_WINDOW_MS = 10 * 60_000;
 
 // Diretrizes do fluxo de venda consultiva em 3 estágios (anexadas ao system prompt em sessões de comércio).
 const ORDER_FLOW_DIRECTIVES = `
@@ -395,13 +400,22 @@ export class AutoReplyPlugin implements IPlugin {
         // Idempotência: mesma cesta dentro de 60s (burst/retry) — não duplica o pedido.
       } else {
         try {
-          const order = await this.commerce.placeOrder({ sessionId, phone, customerName, items: cart.items });
-          context.logger.log('Pedido criado pela conversa', { sessionId, phone, orderId: order.id, total: order.total, itens: cart.items.length });
+          // Se já há um pedido recente nesta conversa (ex.: cliente aceitou o upsell logo após fechar),
+          // SOMA os itens nesse pedido em vez de criar um novo. Senão, cria um pedido novo.
+          const merge = cart.lastOrderId && Date.now() - cart.lastAt < ORDER_MERGE_WINDOW_MS;
+          if (merge) {
+            const order = await this.commerce.appendOrder(cart.lastOrderId as string, cart.items);
+            context.logger.log('Itens somados ao pedido (upsell aceito)', { sessionId, phone, orderId: order.id, total: order.total });
+          } else {
+            const order = await this.commerce.placeOrder({ sessionId, phone, customerName, items: cart.items });
+            context.logger.log('Pedido criado pela conversa', { sessionId, phone, orderId: order.id, total: order.total, itens: cart.items.length });
+            cart.lastOrderId = order.id;
+          }
           cart.items = [];
           cart.lastHash = hash;
           cart.lastAt = Date.now();
         } catch (e) {
-          context.logger.error('Falha ao criar pedido', e);
+          context.logger.error('Falha ao registrar pedido', e);
         }
       }
     }

@@ -118,6 +118,31 @@ export class OrdersService {
     return this.repo.save(order);
   }
 
+  /** Adiciona itens a um pedido existente (upsell aceito após a recomendação) e re-notifica. */
+  async appendItems(id: string, items: OrderItem[]): Promise<Order> {
+    const order = await this.findById(id);
+    const merged = [...(order.items ?? [])];
+    for (const it of items.filter(i => i && i.produto)) {
+      const ex = merged.find(m => m.produto.toLowerCase() === it.produto.toLowerCase());
+      if (ex) ex.qtd += it.qtd;
+      else merged.push(it);
+    }
+    order.items = merged;
+    order.total = this.computeTotal(merged);
+    const saved = await this.repo.save(order);
+    this.events.emitOrderCreated(saved.sessionId, {
+      orderId: saved.id,
+      phone: saved.phone,
+      customerName: saved.customerName,
+      total: saved.total,
+      itemCount: saved.items.length,
+      items: saved.items,
+      source: saved.source,
+      updated: true,
+    });
+    return saved;
+  }
+
   async delete(id: string): Promise<void> {
     await this.repo.delete(id);
   }

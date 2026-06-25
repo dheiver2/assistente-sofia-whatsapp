@@ -102,6 +102,10 @@ export class ExtensionsRegistrar implements OnModuleInit {
         });
         return { id: order.id, total: Number(order.total) };
       },
+      appendOrder: async (orderId, items) => {
+        const order = await this.ordersService.appendItems(orderId, items);
+        return { id: order.id, total: Number(order.total) };
+      },
     };
 
     this.pluginLoader.registerBuiltInPlugin(autoReplyManifest, new AutoReplyPlugin(resolveSession, resolveContact, commerce));
