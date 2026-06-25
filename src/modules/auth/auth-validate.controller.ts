@@ -1,7 +1,17 @@
-import { Controller, Post, Headers, HttpCode, HttpStatus } from '@nestjs/common';
+import { Controller, Post, Headers, Body, HttpCode, HttpStatus, UnauthorizedException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiResponse, ApiHeader } from '@nestjs/swagger';
+import { timingSafeEqual } from 'crypto';
 import { AuthService } from './auth.service';
+import { Public } from './decorators/auth.decorators';
 import { createLogger } from '../../common/services/logger.service';
+
+/** Comparação em tempo constante (evita timing attacks no usuário/senha). */
+function safeEqual(a: string, b: string): boolean {
+  const ba = Buffer.from(a);
+  const bb = Buffer.from(b);
+  if (ba.length !== bb.length) return false;
+  return timingSafeEqual(ba, bb);
+}
 
 @ApiTags('auth')
 @Controller('auth')
@@ -9,6 +19,28 @@ export class AuthValidateController {
   private readonly logger = createLogger('AuthValidateController');
 
   constructor(private readonly authService: AuthService) {}
+
+  @Public()
+  @Post('login')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Login tradicional (usuário + senha) — devolve a chave de acesso do dashboard' })
+  @ApiResponse({ status: 200, description: 'Login válido' })
+  @ApiResponse({ status: 401, description: 'Usuário ou senha inválidos' })
+  login(@Body() body: { username?: string; password?: string }): { apiKey: string } {
+    const expectedUser = process.env.DASHBOARD_USERNAME ?? 'admin';
+    const expectedPass = process.env.DASHBOARD_PASSWORD ?? '';
+    const okUser = safeEqual(body?.username ?? '', expectedUser);
+    const okPass = expectedPass.length > 0 && safeEqual(body?.password ?? '', expectedPass);
+    if (!okUser || !okPass) {
+      this.logger.warn('Tentativa de login inválida', { username: body?.username });
+      throw new UnauthorizedException('Usuário ou senha inválidos');
+    }
+    const apiKey = this.authService.getRawApiKey();
+    if (!apiKey) {
+      throw new UnauthorizedException('Chave de acesso indisponível no servidor');
+    }
+    return { apiKey };
+  }
 
   @Post('validate')
   @HttpCode(HttpStatus.OK)

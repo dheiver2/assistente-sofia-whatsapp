@@ -12,8 +12,9 @@ interface LoginProps {
 
 export function Login({ onLogin }: LoginProps) {
   const { t, i18n } = useTranslation();
-  const [apiKey, setApiKey] = useState('');
-  const [showKey, setShowKey] = useState(false);
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPass, setShowPass] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const currentLang = resolveSupportedLanguage(i18n.resolvedLanguage || i18n.language);
@@ -24,27 +25,30 @@ export function Login({ onLogin }: LoginProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!apiKey.trim()) {
-      setError(t('login.apiKeyRequired'));
+    if (!username.trim() || !password) {
+      setError(t('login.credentialsRequired', 'Informe usuário e senha'));
       return;
     }
     setIsLoading(true);
     setError('');
 
     try {
-      const response = await fetch(`${API_BASE_URL}/auth/validate`, {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'X-API-Key': apiKey,
-        },
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: username.trim(), password }),
       });
 
       if (response.ok) {
-        onLogin(apiKey);
+        const data = await response.json().catch(() => ({}));
+        if (data?.apiKey) {
+          onLogin(data.apiKey);
+        } else {
+          setError(t('login.invalidCredentials', 'Usuário ou senha inválidos'));
+        }
       } else {
         const errorData = await response.json().catch(() => ({}));
-        setError(errorData.message || t('login.invalidKey'));
+        setError(errorData.message || t('login.invalidCredentials', 'Usuário ou senha inválidos'));
       }
     } catch {
       setError(t('login.connectionError'));
@@ -84,30 +88,46 @@ export function Login({ onLogin }: LoginProps) {
 
         <form onSubmit={handleSubmit} className="login-form">
           <div className="input-group">
-            <label htmlFor="apiKey">{t('login.apiKey')}</label>
+            <label htmlFor="username">{t('login.username', 'Usuário')}</label>
             <div className="input-wrapper">
               <input
-                id="apiKey"
-                type={showKey ? 'text' : 'password'}
-                value={apiKey}
-                onChange={e => setApiKey(e.target.value)}
-                placeholder={t('login.apiKeyPlaceholder')}
+                id="username"
+                type="text"
+                autoComplete="username"
+                value={username}
+                onChange={e => setUsername(e.target.value)}
+                placeholder={t('login.usernamePlaceholder', 'Digite seu usuário')}
+                className={error ? 'error' : ''}
+              />
+            </div>
+          </div>
+
+          <div className="input-group">
+            <label htmlFor="password">{t('login.password', 'Senha')}</label>
+            <div className="input-wrapper">
+              <input
+                id="password"
+                type={showPass ? 'text' : 'password'}
+                autoComplete="current-password"
+                value={password}
+                onChange={e => setPassword(e.target.value)}
+                placeholder={t('login.passwordPlaceholder', 'Digite sua senha')}
                 className={error ? 'error' : ''}
               />
               <button
                 type="button"
                 className="toggle-visibility"
-                onClick={() => setShowKey(!showKey)}
-                aria-label={showKey ? t('common.hideApiKey') : t('common.showApiKey')}
+                onClick={() => setShowPass(!showPass)}
+                aria-label={showPass ? t('login.hidePassword', 'Ocultar senha') : t('login.showPassword', 'Mostrar senha')}
               >
-                {showKey ? <EyeOff size={20} /> : <Eye size={20} />}
+                {showPass ? <EyeOff size={20} /> : <Eye size={20} />}
               </button>
             </div>
             {error && <span className="error-message">{error}</span>}
           </div>
 
           <button type="submit" className="connect-btn" disabled={isLoading}>
-            {isLoading ? t('login.connecting') : t('login.connect')}
+            {isLoading ? t('login.connecting') : t('login.signIn', 'Entrar')}
           </button>
         </form>
 

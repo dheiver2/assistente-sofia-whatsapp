@@ -99,6 +99,18 @@ export class AuthService implements OnModuleInit {
     this.logger.log('');
   }
 
+  /**
+   * Raw admin API key (from the secret file written on first boot). Used by the username/password
+   * login to hand the dashboard a working key after validating credentials. Null if unavailable.
+   */
+  getRawApiKey(): string | null {
+    try {
+      return existsSync(API_KEY_FILE) ? readFileSync(API_KEY_FILE, 'utf-8').trim() : null;
+    } catch {
+      return null;
+    }
+  }
+
   private async seedApiKey(rawKey: string, name: string, role: ApiKeyRole): Promise<ApiKey> {
     const keyHash = this.hashKey(rawKey);
     const keyPrefix = rawKey.substring(0, 12);
