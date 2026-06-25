@@ -286,6 +286,13 @@ export class EventsGateway implements OnGatewayInit, OnGatewayConnection, OnGate
   }
 
   /**
+   * Emit a new-order notification (pedido fechado pelo cliente na conversa).
+   */
+  emitOrderCreated(sessionId: string, order: Record<string, unknown>) {
+    this.emitToRooms(sessionId, 'order.created', order);
+  }
+
+  /**
    * Emit a live delivery-status update (neutral DeliveryStatus, e.g. delivered/read/failed).
    */
   emitMessageAck(sessionId: string, data: { messageId: string; status: DeliveryStatus }) {

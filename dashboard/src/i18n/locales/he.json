@@ -72,7 +72,8 @@
     "sales": "Sales",
     "campaigns": "קמפיינים",
     "contacts": "אנשי קשר",
-    "config": "Config"
+    "config": "Config",
+    "orders": "הזמנות"
   },
   "chats": {
     "subtitle": "שליחה ומענה להודעות WhatsApp בזמן אמת",

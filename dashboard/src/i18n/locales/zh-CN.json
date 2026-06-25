@@ -72,7 +72,8 @@
     "sales": "Sales",
     "campaigns": "营销活动",
     "contacts": "联系人",
-    "config": "Config"
+    "config": "Config",
+    "orders": "订单"
   },
   "chats": {
     "subtitle": "实时发送和回复 WhatsApp 消息",

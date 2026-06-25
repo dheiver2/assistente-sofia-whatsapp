@@ -24,6 +24,7 @@ export const SUBSCRIBABLE_EVENTS = [
   'group.join',
   'group.leave',
   'group.update',
+  'order.created',
 ] as const;
 
 export type SubscribableEvent = (typeof SUBSCRIBABLE_EVENTS)[number] | '*';

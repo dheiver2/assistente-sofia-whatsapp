@@ -184,6 +184,33 @@
   padding: 0.6rem;
 }
 
+/* Badge de novos pedidos no item de menu */
+.nav-item-badge {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 6px;
+  border-radius: 10px;
+  background: var(--primary, #ff7a1a);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.sidebar.collapsed .nav-item-badge {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  margin-left: 0;
+}
+
 .nav-item svg {
   flex-shrink: 0;
   color: var(--text-muted);

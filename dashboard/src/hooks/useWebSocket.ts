@@ -49,6 +49,16 @@ interface MessageRevokedEvent {
   timestamp: number;
 }
 
+interface OrderCreatedEvent {
+  sessionId: string;
+  orderId: string;
+  phone: string;
+  customerName: string | null;
+  total: number;
+  itemCount: number;
+  timestamp: string;
+}
+
 interface WebSocketEvents {
   onSessionStatus?: (event: SessionStatusEvent) => void;
   onQRCode?: (event: QRCodeEvent) => void;
@@ -56,6 +66,7 @@ interface WebSocketEvents {
   onMessageAck?: (event: MessageAckEvent) => void;
   onMessageReaction?: (event: MessageReactionEvent) => void;
   onMessageRevoked?: (event: MessageRevokedEvent) => void;
+  onOrderCreated?: (event: OrderCreatedEvent) => void;
 }
 
 // Shape of the server -> client event envelope produced by the NestJS gateway.
@@ -226,6 +237,17 @@ export function useWebSocket(events: WebSocketEvents = {}) {
             body: String(data.body ?? ''),
             type: String(data.type),
             timestamp: Number(data.timestamp),
+          });
+          break;
+        case 'order.created':
+          events.onOrderCreated?.({
+            sessionId,
+            orderId: String(data.orderId),
+            phone: String(data.phone ?? ''),
+            customerName: (data.customerName as string | null) ?? null,
+            total: Number(data.total ?? 0),
+            itemCount: Number(data.itemCount ?? 0),
+            timestamp: msg.timestamp,
           });
           break;
         default:

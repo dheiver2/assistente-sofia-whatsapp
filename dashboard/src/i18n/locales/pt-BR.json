@@ -80,7 +80,8 @@
       "growth": "Crescimento",
       "connections": "Conexões",
       "system": "Sistema"
-    }
+    },
+    "orders": "Pedidos"
   },
   "chats": {
     "subtitle": "Envie e responda mensagens do WhatsApp em tempo real",

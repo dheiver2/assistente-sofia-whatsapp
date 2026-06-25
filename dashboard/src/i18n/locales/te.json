@@ -72,7 +72,8 @@
     "sales": "Sales",
     "campaigns": "ప్రచారాలు",
     "contacts": "పరిచయాలు",
-    "config": "Config"
+    "config": "Config",
+    "orders": "ఆర్డర్‌లు"
   },
   "chats": {
     "subtitle": "వాట్సాప్ సందేశాలను నిజ-సమయంలో పంపండి మరియు ప్రత్యుత్తరం ఇవ్వండి",

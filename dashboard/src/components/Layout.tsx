@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { sessionApi } from '../services/api';
+import { useWebSocket } from '../hooks/useWebSocket';
 import {
   Home,
   Smartphone,
@@ -18,6 +19,7 @@ import {
   ChevronRight,
   Languages,
   Users,
+  ShoppingBag,
 } from 'lucide-react';
 import { useTheme } from '../hooks/useTheme';
 import { type UserRole } from '../hooks/useRole';
@@ -47,6 +49,7 @@ const navGroups: NavGroup[] = [
     section: 'growth',
     items: [
       { to: '/vendas', icon: Rocket, key: 'sales' },
+      { to: '/pedidos', icon: ShoppingBag, key: 'orders' },
     ],
   },
   { section: 'connections', items: [{ to: '/sessoes', icon: Smartphone, key: 'sessions' }] },
@@ -64,6 +67,21 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
   const visibleGroups = navGroups
     .map(g => ({ ...g, items: g.items.filter(it => !it.adminOnly || userRole === 'admin') }))
     .filter(g => g.items.length > 0);
+
+  // Badge de novos pedidos: incrementa ao receber order.created (qualquer sessão) e zera ao abrir Pedidos.
+  const location = useLocation();
+  const [newOrders, setNewOrders] = useState(0);
+  const { isConnected, subscribe } = useWebSocket({
+    onOrderCreated: () => {
+      if (location.pathname !== '/pedidos') setNewOrders(n => n + 1);
+    },
+  });
+  useEffect(() => {
+    if (isConnected) subscribe('*', ['order.created']);
+  }, [isConnected, subscribe]);
+  useEffect(() => {
+    if (location.pathname === '/pedidos') setNewOrders(0);
+  }, [location.pathname]);
 
   const [readySessions, setReadySessions] = useState(0);
   useEffect(() => {
@@ -180,6 +198,7 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
               )}
               {group.items.map(({ to, icon: Icon, key }) => {
                 const label = t(`nav.${key}`);
+                const badge = key === 'orders' && newOrders > 0 ? newOrders : undefined;
                 return (
                   <NavLink
                     key={to}
@@ -191,6 +210,7 @@ export function Layout({ onLogout, userRole }: LayoutProps) {
                   >
                     <Icon size={19} />
                     {!isCollapsed && <span>{label}</span>}
+                    {badge !== undefined && <span className="nav-item-badge">{badge > 99 ? '99+' : badge}</span>}
                   </NavLink>
                 );
               })}

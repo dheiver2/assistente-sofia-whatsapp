@@ -80,7 +80,8 @@
       "growth": "Growth",
       "connections": "Connections",
       "system": "System"
-    }
+    },
+    "orders": "Orders"
   },
   "chats": {
     "subtitle": "Send and reply to WhatsApp messages in real time",

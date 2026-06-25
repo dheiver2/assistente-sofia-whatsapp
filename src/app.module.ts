@@ -36,6 +36,7 @@ import { PluginsApiModule } from './modules/plugins/plugins.module';
 import { ExtensionsModule } from './plugins/extensions/extensions.module';
 import { ContactsModule } from './modules/contacts/contacts.module';
 import { RecommendationsModule } from './modules/recommendations/recommendations.module';
+import { OrdersModule } from './modules/orders/orders.module';
 
 // Only import QueueModule if explicitly enabled to avoid Redis connection errors
 const queueModules: Array<Type | DynamicModule> = [];
@@ -121,6 +122,7 @@ if (dashboardServingEnabled && dashboardBuildPresent) {
             __dirname + '/modules/sales-engine/**/*.entities{.ts,.js}',
             __dirname + '/modules/contacts/**/*.entity{.ts,.js}',
             __dirname + '/modules/recommendations/**/*.entity{.ts,.js}',
+            __dirname + '/modules/orders/**/*.entity{.ts,.js}',
             __dirname + '/engine/**/*.entity{.ts,.js}',
           ],
           migrations: [__dirname + '/database/migrations/*{.ts,.js}'],
@@ -227,6 +229,7 @@ if (dashboardServingEnabled && dashboardBuildPresent) {
     ContactsModule, // Unified contact database with tags and notes
     SalesEngineModule, // Motor de Vendas (MVP): gera abordagens personalizadas por lead
     RecommendationsModule, // AI multi-agent recommendation pipeline
+    OrdersModule, // Pedidos: histórico do BI + pedidos fechados na conversa (com notificação)
     ...serveStaticModules, // Bundled dashboard SPA (production single-port setup)
   ],
 })

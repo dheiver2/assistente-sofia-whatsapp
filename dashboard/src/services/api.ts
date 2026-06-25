@@ -511,6 +511,55 @@ export const contactApi = {
 };
 
 // =============================================================================
+// Orders API (Pedidos)
+// =============================================================================
+
+export interface OrderItem {
+  produto: string;
+  qtd: number;
+  preco: number;
+}
+
+export type OrderStatus = 'novo' | 'confirmado' | 'concluido' | 'cancelado';
+
+export interface Order {
+  id: string;
+  sessionId: string;
+  phone: string;
+  customerName: string | null;
+  items: OrderItem[];
+  total: number;
+  status: OrderStatus;
+  source: 'conversa' | 'historico-bi' | 'manual';
+  reference: string | null;
+  notes: string | null;
+  placedAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const ordersApi = {
+  list: (sessionId: string, params: { status?: string; search?: string; take?: number } = {}) =>
+    request<Order[]>(
+      `/orders?${new URLSearchParams({
+        sessionId,
+        ...(params.status ? { status: params.status } : {}),
+        ...(params.search ? { search: params.search } : {}),
+        ...(params.take ? { take: String(params.take) } : {}),
+      }).toString()}`,
+    ),
+  stats: (sessionId: string) =>
+    request<Record<string, number>>(`/orders/stats?sessionId=${encodeURIComponent(sessionId)}`),
+  byPhone: (sessionId: string, phone: string) =>
+    request<Order[]>(`/orders/phone/${encodeURIComponent(phone)}?sessionId=${encodeURIComponent(sessionId)}`),
+  create: (data: { sessionId: string; phone: string; customerName?: string; items: OrderItem[]; notes?: string }) =>
+    request<Order>('/orders', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id: string, data: { status?: OrderStatus; items?: OrderItem[]; notes?: string }) =>
+    request<Order>(`/orders/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  delete: (id: string) => request<void>(`/orders/${id}`, { method: 'DELETE' }),
+};
+
+// =============================================================================
 // API Key API
 // =============================================================================
 

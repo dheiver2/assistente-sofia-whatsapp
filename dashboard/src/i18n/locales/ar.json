@@ -72,7 +72,8 @@
     "sales": "Sales",
     "campaigns": "حملات",
     "contacts": "جهات الاتصال",
-    "config": "Config"
+    "config": "Config",
+    "orders": "الطلبات"
   },
   "chats": {
     "subtitle": "أرسل ورد على رسائل واتساب في الوقت الفعلي",

@@ -28,10 +28,17 @@ function toWa(raw) {
 }
 const money = v => { const n = parseFloat(String(v || '').replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
 const brl = n => 'R$ ' + n.toFixed(2).replace('.', ',');
-// "14/03/2026" -> Date (ou null)
+// Data do BI: aceita "14/03/2026" (string) OU número de série do Excel (ex.: 46145).
 function parseDate(s) {
+  if (typeof s === 'number' && isFinite(s) && s > 20000) {
+    // Serial do Excel: dias desde 1899-12-30.
+    return new Date(Date.UTC(1899, 11, 30) + Math.round(s) * 86400000);
+  }
   const m = String(s || '').match(/(\d{2})\/(\d{2})\/(\d{4})/);
-  return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null;
+  if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+  const n = Number(s);
+  if (isFinite(n) && n > 20000) return new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000);
+  return null;
 }
 const fmtDate = d => d ? `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` : null;
 
@@ -65,6 +72,7 @@ for (const r of rows) { const d = parseDate(r['Data']); if (d && (!refDate || d 
 
 const custs = {}; // phone -> agg
 const prods = {}; // produto -> agg
+const ordersByNum = {}; // N. Pedido -> { phone, nome, data, items[], total }
 for (const r of rows) {
   const phone = toWa(r['Celular']) || toWa(r['Fone']);
   const nome = String(r['Cliente'] || '').trim();
@@ -74,6 +82,21 @@ for (const r of rows) {
   const data = parseDate(r['Data']);
   const fab = String(r['Fabricante'] || '').trim();
   const total = money(r['Total Item']);
+
+  // Pedido (agrupa itens pelo N. Pedido)
+  const numPedido = r['N. Pedido'] ? String(r['N. Pedido']) : null;
+  if (numPedido && produto) {
+    const o = (ordersByNum[numPedido] = ordersByNum[numPedido] || {
+      phone: phone || digits(r['Celular']) || digits(r['Fone']) || '',
+      nome,
+      data,
+      items: [],
+      total: 0,
+    });
+    if (!o.data && data) o.data = data;
+    o.items.push({ produto, qtd: parseFloat(String(r['Qtd'] || '1').replace(',', '.')) || 1, preco: money(r['Preço Liquido']) });
+    o.total += total;
+  }
   if (phone && nome) {
     const c = (custs[phone] = custs[phone] || { nome, bairro: titleCase(r['Bairro']), cats: {}, brands: {}, pedidos: new Set(), purchases: [], total: 0, byCat: {} });
     if (grupo) c.cats[grupo] = (c.cats[grupo] || 0) + 1;
@@ -177,6 +200,17 @@ const products = Object.entries(prods)
     tags: JSON.stringify([p.cat].filter(Boolean)),
   }));
 
+// Pedidos históricos (um por N. Pedido), status concluído.
+const orders = Object.entries(ordersByNum).map(([num, o]) => ({
+  id: randomUUID(),
+  phone: o.phone || '',
+  customerName: (o.nome || '').replace(/\s*\([^)]*\)\s*/g, ' ').trim().slice(0, 120) || null,
+  items: o.items.map(it => ({ produto: it.produto.slice(0, 160), qtd: it.qtd, preco: it.preco })),
+  total: +o.total.toFixed(2),
+  reference: num,
+  placedAt: o.data ? o.data.toISOString() : null,
+}));
+
 const db = new sqlite3.Database(DB);
 const run = (sql, params = []) => new Promise((res, rej) => db.run(sql, params, function (e) { e ? rej(e) : res(this); }));
 
@@ -199,8 +233,17 @@ const run = (sql, params = []) => new Promise((res, rej) => db.run(sql, params, 
         [p.id, SESSION, p.name, p.description, p.category, p.price, p.tags, p.keywords],
       );
     }
+    // Pedidos históricos (recria os do BI; não toca em pedidos feitos pela conversa).
+    await run("DELETE FROM orders WHERE sessionId = ? AND source = 'historico-bi'", [SESSION]);
+    for (const o of orders) {
+      await run(
+        `INSERT INTO orders (id, sessionId, phone, customerName, items, total, status, source, reference, placedAt, createdAt, updatedAt)
+         VALUES (?,?,?,?,?,?, 'concluido', 'historico-bi', ?,?, datetime('now'), datetime('now'))`,
+        [o.id, SESSION, o.phone, o.customerName, JSON.stringify(o.items), o.total, o.reference, o.placedAt],
+      );
+    }
     await run('COMMIT');
-    console.log(`OK: ${contacts.length} contatos (com perfil/valor/cadência/marca) + ${products.length} produtos. Data ref: ${fmtDate(refDate)}.`);
+    console.log(`OK: ${contacts.length} contatos + ${products.length} produtos + ${orders.length} pedidos históricos. Data ref: ${fmtDate(refDate)}.`);
   } catch (e) {
     await run('ROLLBACK');
     console.error('FALHOU:', e.message);

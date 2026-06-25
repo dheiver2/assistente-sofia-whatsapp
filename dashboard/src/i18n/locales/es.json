@@ -72,7 +72,8 @@
     "sales": "Sales",
     "campaigns": "Campañas",
     "contacts": "Contactos",
-    "config": "Config"
+    "config": "Config",
+    "orders": "Pedidos"
   },
   "chats": {
     "subtitle": "Envía y responde mensajes de WhatsApp en tiempo real",
