@@ -61,11 +61,15 @@ export class RecommendationOrchestrator {
 
     // ── Stage 1: Parallel data fetch ──────────────────────────────────────
     this.logger.log(`[Orchestrator] Stage 1 — fetching profile + catalog for ${phone}`);
-    const [profile, catalog, session] = await Promise.all([
+    const [profile, sessionCatalog, session] = await Promise.all([
       this.profileAgent.fetch(sessionId, phone, externalData),
-      this.products.find({ where: { active: true } }),
+      this.products.find({ where: { active: true, sessionId } }),
       this.sessions.findOne({ where: { id: sessionId }, select: ['id', 'config'] }),
     ]);
+
+    // Catálogo da própria sessão; se a sessão não tem produtos seus, cai no catálogo global (compatível
+    // com instalações antigas que cadastram produtos sem sessionId).
+    const catalog = sessionCatalog.length > 0 ? sessionCatalog : await this.products.find({ where: { active: true } });
 
     const ai = ((session?.config as Record<string, unknown> | undefined)?.ai as { persona?: string; knowledge?: string } | undefined) ?? {};
 
