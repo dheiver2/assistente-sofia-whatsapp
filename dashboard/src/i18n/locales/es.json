@@ -1,7 +1,7 @@
 {
   "common": {
-    "appName": "Mangaba AI",
-    "appSubtitle": "API de WhatsApp",
+    "appName": "Mangaba Vendas",
+    "appSubtitle": "Vendas por IA",
     "loading": "Cargando...",
     "save": "Guardar",
     "cancel": "Cancelar",
@@ -132,7 +132,7 @@
     "connectionError": "No se puede conectar al servidor. Por favor, inténtalo de nuevo.",
     "help": "¿Necesitas ayuda?",
     "viewDocs": "Ver documentación",
-    "footer": "Hecho con ❤️ por Yudhi Armyndharis y la comunidad OpenWA",
+    "footer": "Mangaba Vendas — uma plataforma Mangaba AI",
     "version": "v{{version}} · {{date}}"
   },
   "dashboard": {

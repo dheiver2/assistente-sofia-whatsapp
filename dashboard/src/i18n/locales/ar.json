@@ -1,7 +1,7 @@
 {
   "common": {
-    "appName": "Mangaba AI",
-    "appSubtitle": "واجهة برمجة واتساب",
+    "appName": "Mangaba Vendas",
+    "appSubtitle": "Vendas por IA",
     "loading": "جارٍ التحميل...",
     "save": "حفظ",
     "cancel": "إلغاء",
@@ -132,7 +132,7 @@
     "connectionError": "تعذّر الاتصال بالخادم. يرجى المحاولة مرة أخرى.",
     "help": "هل تحتاج مساعدة؟",
     "viewDocs": "عرض التوثيق",
-    "footer": "صُنع بـ ❤️ بواسطة Yudhi Armyndharis ومجتمع OpenWA",
+    "footer": "Mangaba Vendas — uma plataforma Mangaba AI",
     "version": "v{{version}} · {{date}}"
   },
   "home": "الرئيسية",

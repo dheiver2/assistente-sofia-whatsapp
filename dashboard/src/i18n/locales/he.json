@@ -1,7 +1,7 @@
 {
   "common": {
-    "appName": "Mangaba AI",
-    "appSubtitle": "ממשק WhatsApp API",
+    "appName": "Mangaba Vendas",
+    "appSubtitle": "Vendas por IA",
     "loading": "טוען...",
     "save": "שמירה",
     "cancel": "ביטול",
@@ -132,7 +132,7 @@
     "connectionError": "לא ניתן להתחבר לשרת. יש לנסות שוב.",
     "help": "צריך עזרה?",
     "viewDocs": "לצפייה בתיעוד",
-    "footer": "נבנה באהבה על ידי Yudhi Armyndharis וקהילת OpenWA",
+    "footer": "Mangaba Vendas — uma plataforma Mangaba AI",
     "version": "v{{version}} · {{date}}"
   },
   "home": "בית",

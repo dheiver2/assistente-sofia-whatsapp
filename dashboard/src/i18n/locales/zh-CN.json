@@ -1,7 +1,7 @@
 {
   "common": {
-    "appName": "Mangaba AI",
-    "appSubtitle": "WhatsApp API",
+    "appName": "Mangaba Vendas",
+    "appSubtitle": "Vendas por IA",
     "loading": "正在加载...",
     "save": "保存",
     "cancel": "取消",
@@ -132,7 +132,7 @@
     "connectionError": "无法连接到服务器。请重试。",
     "help": "需要帮助？",
     "viewDocs": "查看文档",
-    "footer": "由 Yudhi Armyndharis 和 OpenWA 社区用 ❤️ 打造",
+    "footer": "Mangaba Vendas — uma plataforma Mangaba AI",
     "version": "v{{version}} · {{date}}"
   },
   "home": "主页",

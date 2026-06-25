@@ -1,7 +1,7 @@
 {
   "common": {
-    "appName": "Mangaba AI",
-    "appSubtitle": "WhatsApp API",
+    "appName": "Mangaba Vendas",
+    "appSubtitle": "Vendas por IA",
     "loading": "Loading...",
     "save": "Save",
     "cancel": "Cancel",
@@ -142,7 +142,7 @@
     "connectionError": "Unable to connect to server. Please try again.",
     "help": "Need help?",
     "viewDocs": "View Documentation",
-    "footer": "Made with ❤️ by Yudhi Armyndharis and the Mangaba AI Community",
+    "footer": "Mangaba Vendas — uma plataforma Mangaba AI",
     "version": "v{{version}} · {{date}}"
   },
   "dashboard": {
@@ -551,7 +551,7 @@
       "postgres": "PostgreSQL",
       "postgresDesc": "Production-ready database",
       "useBuiltIn": "Use Built-in PostgreSQL Container",
-      "builtInDesc": "Mangaba AI will manage a PostgreSQL container for you",
+      "builtInDesc": "Mangaba Vendas will manage a PostgreSQL container for you",
       "dbName": "Database Name",
       "poolSize": "Pool Size",
       "ssl": "SSL Connection",
@@ -567,7 +567,7 @@
       "enable": "Enable Redis",
       "enableDesc": "Required for caching, session storage, and BullMQ queues",
       "useBuiltIn": "Use Built-in Redis Container",
-      "builtInDesc": "Mangaba AI will manage a Redis container for you",
+      "builtInDesc": "Mangaba Vendas will manage a Redis container for you",
       "queueTitle": "Enable BullMQ Queue System",
       "queueDesc": "Use message queues for reliable message and webhook delivery",
       "statsTitle": "Queue Statistics",
@@ -590,7 +590,7 @@
       "s3": "Amazon S3",
       "s3Desc": "Cloud storage (S3 compatible)",
       "useBuiltIn": "Use Built-in MinIO Container",
-      "builtInDesc": "Mangaba AI will manage a MinIO (S3-compatible) container for you",
+      "builtInDesc": "Mangaba Vendas will manage a MinIO (S3-compatible) container for you",
       "storagePath": "Storage Path",
       "bucket": "Bucket Name",
       "region": "Region",
@@ -642,7 +642,7 @@
     "configure": "Configure",
     "empty": {
       "title": "No Plugins Found",
-      "description": "Install plugins to extend Mangaba AI functionality"
+      "description": "Install plugins to extend Mangaba Vendas functionality"
     },
     "config": {
       "title": "Configure {{name}}",
