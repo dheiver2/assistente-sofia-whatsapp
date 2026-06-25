@@ -2,10 +2,13 @@ import { Injectable, Module, OnModuleInit } from '@nestjs/common';
 import { InjectRepository, TypeOrmModule } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { PluginLoaderService, PluginManifest, PluginType } from '../../core/plugins';
-import { AutoReplyPlugin, SessionAi } from './auto-reply';
+import { AutoReplyPlugin, SessionAi, CommerceHooks, OrderItemDescriptor, ResolvedOrderItem } from './auto-reply';
 import { TranslationPlugin } from './translation';
 import { Session } from '../../modules/session/entities/session.entity';
 import { Contact } from '../../modules/contacts/entities/contact.entity';
+import { Product } from '../../modules/recommendations/entities/product.entity';
+import { OrdersModule } from '../../modules/orders/orders.module';
+import { OrdersService } from '../../modules/orders/orders.service';
 import { createLogger } from '../../common/services/logger.service';
 
 /**
@@ -21,7 +24,20 @@ export class ExtensionsRegistrar implements OnModuleInit {
     private readonly pluginLoader: PluginLoaderService,
     @InjectRepository(Session, 'data') private readonly sessionRepo: Repository<Session>,
     @InjectRepository(Contact, 'data') private readonly contactRepo: Repository<Contact>,
+    @InjectRepository(Product, 'data') private readonly productRepo: Repository<Product>,
+    private readonly ordersService: OrdersService,
   ) {}
+
+  /** Minúsculas + sem acento (catálogo é "RACAO", a IA descreve "Ração" — precisam casar). */
+  private deburr(s: string): string {
+    return s.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  /** Pontuação simples de match: nº de termos da descrição encontrados no produto. */
+  private scoreProduct(p: Product, terms: string[]): number {
+    const hay = this.deburr(`${p.name} ${p.category ?? ''} ${p.keywords ?? ''}`);
+    return terms.reduce((acc, t) => acc + (hay.includes(t) ? 1 : 0), 0);
+  }
 
   async onModuleInit(): Promise<void> {
     const autoReplyManifest: PluginManifest = {
@@ -49,7 +65,46 @@ export class ExtensionsRegistrar implements OnModuleInit {
       if (typeof aiContext !== 'string' || !aiContext.trim()) return null;
       return { name: c?.name ?? null, aiContext };
     };
-    this.pluginLoader.registerBuiltInPlugin(autoReplyManifest, new AutoReplyPlugin(resolveSession, resolveContact));
+    // Hooks de comércio: a IA descreve o que o cliente quer, o backend resolve preço/nome no catálogo
+    // (fonte da verdade) e cria o pedido (status 'novo' → notificação). Liga só em sessões com catálogo.
+    const commerce: CommerceHooks = {
+      isEnabled: async (sessionId: string): Promise<boolean> => {
+        const n = await this.productRepo.count({ where: { sessionId, active: true } });
+        return n > 0;
+      },
+      resolveProducts: async (sessionId: string, items: OrderItemDescriptor[]): Promise<ResolvedOrderItem[]> => {
+        const catalog = await this.productRepo.find({ where: { sessionId, active: true } });
+        return items.map(it => {
+          const terms = `${it.descricao} ${it.marca ?? ''}`
+            .toLowerCase()
+            .split(/[^a-zà-ú0-9]+/)
+            .filter(w => w.length >= 3);
+          let best: Product | null = null;
+          let bestScore = 0;
+          for (const p of catalog) {
+            const s = this.scoreProduct(p, terms);
+            if (s > bestScore) { bestScore = s; best = p; }
+          }
+          const qtd = Number(it.qtd) > 0 ? Number(it.qtd) : 1;
+          // Match confiável → nome+preço canônicos; senão mantém a descrição com preço 0 (a IA confirma depois).
+          if (best && bestScore > 0) return { produto: best.name, qtd, preco: Number(best.price) || 0 };
+          return { produto: it.descricao, qtd, preco: 0 };
+        });
+      },
+      placeOrder: async input => {
+        const order = await this.ordersService.create({
+          sessionId: input.sessionId,
+          phone: input.phone,
+          customerName: input.customerName ?? null,
+          items: input.items,
+          source: 'conversa',
+          status: 'novo',
+        });
+        return { id: order.id, total: Number(order.total) };
+      },
+    };
+
+    this.pluginLoader.registerBuiltInPlugin(autoReplyManifest, new AutoReplyPlugin(resolveSession, resolveContact, commerce));
     this.logger.log('Auto-reply plugin registered — enabling automatically');
     await this.pluginLoader.enablePlugin('auto-reply');
 
@@ -102,7 +157,7 @@ export class ExtensionsRegistrar implements OnModuleInit {
 }
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Session, Contact], 'data')],
+  imports: [TypeOrmModule.forFeature([Session, Contact, Product], 'data'), OrdersModule],
   providers: [ExtensionsRegistrar],
 })
 export class ExtensionsModule {}

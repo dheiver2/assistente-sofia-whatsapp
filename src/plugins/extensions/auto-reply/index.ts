@@ -74,6 +74,72 @@ export type SessionResolver = (sessionId: string) => Promise<{ name: string | nu
  *  personalizar a conversa e recomendar com base no que a pessoa já comprou. */
 export type ContactResolver = (sessionId: string, phone: string) => Promise<{ name: string | null; aiContext: string } | null>;
 
+/** Item descrito pela IA no bloco <pedido> (linguagem natural — o backend resolve no catálogo). */
+export interface OrderItemDescriptor {
+  descricao: string;
+  categoria?: string;
+  marca?: string;
+  qtd?: number;
+}
+/** Item já resolvido no catálogo (nome canônico + preço da base — fonte da verdade). */
+export interface ResolvedOrderItem {
+  produto: string;
+  qtd: number;
+  preco: number;
+}
+
+/**
+ * Hooks de comércio injetados pelo registrar (acesso ao catálogo e ao módulo de pedidos). Mantêm o
+ * plugin desacoplado: a IA descreve o que o cliente quer, o BACKEND resolve preço/nome e cria o pedido.
+ */
+export interface CommerceHooks {
+  /** A sessão é de comércio? (tem catálogo de produtos). Liga o fluxo de pedidos só onde faz sentido. */
+  isEnabled(sessionId: string): Promise<boolean>;
+  /** Resolve descrições da IA contra o catálogo da sessão (nome canônico + preço). */
+  resolveProducts(sessionId: string, items: OrderItemDescriptor[]): Promise<ResolvedOrderItem[]>;
+  /** Cria o pedido (status 'novo' → emite order.created). Retorna id + total. */
+  placeOrder(input: {
+    sessionId: string;
+    phone: string;
+    customerName?: string | null;
+    items: ResolvedOrderItem[];
+  }): Promise<{ id: string; total: number }>;
+}
+
+/** Bloco estruturado que a IA emite ao fim de cada resposta (removido antes de enviar ao cliente). */
+interface PedidoBlock {
+  intent?: string;
+  itens?: OrderItemDescriptor[];
+  confirmado?: boolean;
+  handoff?: { necessario?: boolean; motivo?: string };
+}
+
+/** Estado do carrinho por conversa (persistido junto do histórico). */
+interface CartState {
+  items: ResolvedOrderItem[];
+  lastHash: string;
+  lastAt: number;
+}
+
+// Confirmação explícita do cliente no texto (dupla checagem além do confirmado:true do LLM).
+const CONFIRM_RE = /\b(confirm[ao]|pode\s+(mandar|separar|ser|fechar|enviar)|isso\s*mesmo|fechado|quero\s+sim|é\s+isso|pode\s+sim|fecha)\b/i;
+const HANDOFF_INTENTS = new Set(['emergencia_saude', 'reclamacao', 'falar_com_humano', 'opt_out']);
+
+// Diretrizes do fluxo de venda consultiva em 3 estágios (anexadas ao system prompt em sessões de comércio).
+const ORDER_FLOW_DIRECTIVES = `
+
+COMO ATENDER (loja — venda consultiva em 3 estágios, sem menu "digite 1"):
+1) ENTENDER: descubra a necessidade com o MÍNIMO de perguntas. Aproveite o que já sabe do cliente/pet — CONFIRME em vez de perguntar (ex.: "é a Golden 15kg de sempre pro Thor, né?"). Máx. 1 pergunta por vez.
+2) FECHAR: monte o pedido e confirme itens e quantidades. Você NUNCA inventa preço nem nome exato de produto — descreva o item no bloco <pedido> e só fale o valor DEPOIS que o sistema confirmar; se ainda não souber, diga "já te confirmo o valor certinho".
+3) RECOMENDAR: só DEPOIS que o cliente confirmar o pedido, ofereça UM complemento que combine e lembre a próxima reposição. Não insista se ele recusar.
+
+HANDOFF: se for sintoma/doença do pet, urgência, reclamação séria, negociação de preço ou pedido de falar com humano — não tente resolver nem vender; diga que vai passar para a equipe (que já tem todo o contexto, o cliente não repete nada) e marque handoff no bloco. Em saúde, jamais minimize.
+
+Ao FINAL de CADA resposta, acrescente UM bloco <pedido>...</pedido> em JSON (o cliente NÃO vê). Use SEMPRE exatamente estas chaves:
+<pedido>{"intent":"repor_consumivel|comprar_produto|agendar_banho_tosa|agendar_vet_vacina|confirmar_pedido|ajustar_carrinho|duvida|falar_com_humano|nenhum","itens":[{"descricao":"","categoria":"","marca":"","qtd":1}],"confirmado":false,"handoff":{"necessario":false,"motivo":""}}</pedido>
+"confirmado" só é true quando o cliente confirmar claramente ("confirma","pode mandar","isso","fechado"). Sem ação, use "intent":"nenhum" e "itens":[].
+Exemplo — cliente: "quero 2 sacos da golden 15kg pro thor" → <pedido>{"intent":"repor_consumivel","itens":[{"descricao":"Ração Golden 15kg","categoria":"RACAO","marca":"Golden","qtd":2}],"confirmado":false,"handoff":{"necessario":false,"motivo":""}}</pedido>`;
+
 function isWithinBusinessHours(bh: NonNullable<SessionAi['businessHours']>): boolean {
   if (!bh.enabled) return true;
   const tz = bh.timezone ?? 'America/Sao_Paulo';
@@ -129,10 +195,13 @@ export class AutoReplyPlugin implements IPlugin {
   // pausa conversas AQUI — uma mensagem fromMe num chat que a IA nunca tocou é uso normal, não takeover.
   private readonly aiEngaged = new Map<string, number>();
   private cleanupTimer?: ReturnType<typeof setInterval>;
+  // Cache de "a sessão é de comércio?" (evita consultar o catálogo a cada mensagem).
+  private readonly commerceCache = new Map<string, { v: boolean; at: number }>();
 
   constructor(
     private readonly resolveSession?: SessionResolver,
     private readonly resolveContact?: ContactResolver,
+    private readonly commerce?: CommerceHooks,
   ) {}
 
   /** Registra um texto enviado pela própria IA (para distinguir do humano no eco fromMe). */
@@ -249,6 +318,95 @@ export class AutoReplyPlugin implements IPlugin {
 
   private async saveHistory(context: PluginContext, key: string, history: ChatTurn[]): Promise<void> {
     await context.storage.set(key, history.slice(-HISTORY_TURNS() * 2));
+  }
+
+  // ── Fluxo de pedidos (3 estágios) ────────────────────────────────────────────
+  /** A sessão é de comércio? (tem catálogo). Cacheado por 5 min. */
+  private async commerceEnabled(sessionId: string): Promise<boolean> {
+    if (!this.commerce) return false;
+    const c = this.commerceCache.get(sessionId);
+    if (c && Date.now() - c.at < 300_000) return c.v;
+    const v = await this.commerce.isEnabled(sessionId).catch(() => false);
+    this.commerceCache.set(sessionId, { v, at: Date.now() });
+    return v;
+  }
+
+  private cartKey(sessionId: string, chatId: string): string {
+    const safe = (s: string): string => s.replace(/[^a-zA-Z0-9@:._-]/g, '_');
+    return `cart-${safe(sessionId)}-${safe(chatId)}`;
+  }
+
+  private cartHash(items: ResolvedOrderItem[]): string {
+    return items.map(i => `${normText(i.produto)}x${i.qtd}`).sort().join('|');
+  }
+
+  /** Extrai o bloco <pedido>{...}</pedido> (ou ```json) e devolve o texto limpo + o objeto. */
+  private parsePedido(text: string): { clean: string; pedido: PedidoBlock | null } {
+    const m = text.match(/<pedido>\s*([\s\S]*?)<\/pedido>/i) || text.match(/```json\s*([\s\S]*?)```/i);
+    let pedido: PedidoBlock | null = null;
+    if (m) {
+      try { pedido = JSON.parse(m[1].trim()) as PedidoBlock; } catch { /* bloco inválido: ignora */ }
+    }
+    const clean = text
+      .replace(/<pedido>[\s\S]*?<\/pedido>/gi, '')
+      .replace(/```json[\s\S]*?```/gi, '')
+      .trim();
+    return { clean, pedido };
+  }
+
+  /** Processa o bloco de pedido: handoff, resolução no catálogo, montagem do carrinho e fechamento. */
+  private async processPedido(
+    context: PluginContext,
+    sessionId: string,
+    chatId: string,
+    key: string,
+    phone: string,
+    customerName: string | null,
+    userText: string,
+    pedido: PedidoBlock,
+  ): Promise<void> {
+    if (!this.commerce) return;
+
+    // Handoff sinalizado pela IA → silencia e não cria pedido (a equipe assume com o contexto).
+    if (pedido.handoff?.necessario || (pedido.intent && HANDOFF_INTENTS.has(pedido.intent))) {
+      this.humanPausedUntil.set(key, Date.now() + HANDOFF_PAUSE_MS());
+      context.logger.log('Handoff sinalizado pela IA', { sessionId, chatId, motivo: pedido.handoff?.motivo ?? pedido.intent });
+      return;
+    }
+
+    const ckey = this.cartKey(sessionId, chatId);
+    const cart: CartState = (await context.storage.get<CartState>(ckey)) ?? { items: [], lastHash: '', lastAt: 0 };
+
+    // Resolve as descrições da IA contra o catálogo e mescla no carrinho.
+    const descritos = Array.isArray(pedido.itens) ? pedido.itens.filter(i => i && i.descricao) : [];
+    if (descritos.length) {
+      const resolved = await this.commerce.resolveProducts(sessionId, descritos).catch(() => [] as ResolvedOrderItem[]);
+      for (const r of resolved) {
+        const ex = cart.items.find(c => normText(c.produto) === normText(r.produto));
+        if (ex) { ex.qtd = r.qtd; ex.preco = r.preco; } else cart.items.push(r);
+      }
+    }
+
+    // Fechamento: confirmado pela IA E confirmação explícita no texto do cliente (dupla checagem).
+    const confirmar = pedido.confirmado === true && CONFIRM_RE.test(userText) && cart.items.length > 0;
+    if (confirmar) {
+      const hash = this.cartHash(cart.items);
+      if (cart.lastHash === hash && Date.now() - cart.lastAt < 60_000) {
+        // Idempotência: mesma cesta dentro de 60s (burst/retry) — não duplica o pedido.
+      } else {
+        try {
+          const order = await this.commerce.placeOrder({ sessionId, phone, customerName, items: cart.items });
+          context.logger.log('Pedido criado pela conversa', { sessionId, phone, orderId: order.id, total: order.total, itens: cart.items.length });
+          cart.items = [];
+          cart.lastHash = hash;
+          cart.lastAt = Date.now();
+        } catch (e) {
+          context.logger.error('Falha ao criar pedido', e);
+        }
+      }
+    }
+
+    await context.storage.set(ckey, cart);
   }
 
   private async generate(model: string, systemPrompt: string, history: ChatTurn[], userText: string): Promise<string> {
@@ -407,12 +565,14 @@ export class AutoReplyPlugin implements IPlugin {
 
       const history = await this.loadHistory(context, key);
       const firstContact = history.length === 0;
+      const phone = chatId.split('@')[0].replace(/\D/g, '');
 
       // Cliente conhecido: injeta o histórico/perfil para a IA personalizar e recomendar na conversa.
       let systemPrompt = profile.systemPrompt;
+      let custName: string | null = null;
       try {
-        const phone = chatId.split('@')[0].replace(/\D/g, '');
         const cust = this.resolveContact && phone ? await this.resolveContact(sessionId, phone) : null;
+        custName = cust?.name ?? null;
         if (cust?.aiContext) {
           systemPrompt +=
             `\n\nCLIENTE QUE ESTÁ FALANDO AGORA (dados reais do histórico — use com naturalidade para ` +
@@ -423,6 +583,10 @@ export class AutoReplyPlugin implements IPlugin {
         /* segue sem contexto do cliente */
       }
 
+      // Sessão de comércio (tem catálogo): liga o fluxo de venda consultiva em 3 estágios.
+      const commerceOn = await this.commerceEnabled(sessionId);
+      if (commerceOn) systemPrompt += ORDER_FLOW_DIRECTIVES;
+
       let reply: string;
       try {
         reply = await this.generate(profile.model, systemPrompt, history, userText);
@@ -431,6 +595,14 @@ export class AutoReplyPlugin implements IPlugin {
         this.recordAiSent(key, FALLBACK);
         await context.messages.reply(sessionId, chatId, burst.lastMessageId, FALLBACK);
         return; // não grava fallback no histórico
+      }
+
+      // Extrai e REMOVE o bloco <pedido> antes de enviar ao cliente (ele não vê o JSON).
+      let pedido: PedidoBlock | null = null;
+      if (commerceOn) {
+        const parsed = this.parsePedido(reply);
+        pedido = parsed.pedido;
+        if (parsed.clean) reply = parsed.clean;
       }
 
       // Recheca o pause logo antes do envio (a geração no LLM pode levar segundos).
@@ -443,6 +615,15 @@ export class AutoReplyPlugin implements IPlugin {
 
       history.push({ role: 'user', content: userText }, { role: 'assistant', content: reply });
       await this.saveHistory(context, key, history);
+
+      // Processa o pedido (resolve catálogo, monta carrinho, fecha + notifica, ou faz handoff).
+      if (commerceOn && pedido) {
+        try {
+          await this.processPedido(context, sessionId, chatId, key, phone, custName, userText, pedido);
+        } catch (e) {
+          context.logger.warn('processPedido falhou', { error: String(e) });
+        }
+      }
     } catch (error) {
       context.logger.error('Auto-reply failed', error);
     }
