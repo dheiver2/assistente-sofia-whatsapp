@@ -19,6 +19,11 @@ export class OrderItemDto {
   @IsNumber()
   @Min(0)
   preco: number;
+
+  @ApiPropertyOptional({ enum: ['pedido', 'recomendacao'] })
+  @IsOptional()
+  @IsIn(['pedido', 'recomendacao'])
+  origem?: 'pedido' | 'recomendacao';
 }
 
 export class CreateOrderDto {

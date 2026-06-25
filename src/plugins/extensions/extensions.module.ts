@@ -86,9 +86,10 @@ export class ExtensionsRegistrar implements OnModuleInit {
             if (s > bestScore) { bestScore = s; best = p; }
           }
           const qtd = Number(it.qtd) > 0 ? Number(it.qtd) : 1;
+          const origem = it.origem === 'recomendacao' ? 'recomendacao' : 'pedido';
           // Match confiável → nome+preço canônicos; senão mantém a descrição com preço 0 (a IA confirma depois).
-          if (best && bestScore > 0) return { produto: best.name, qtd, preco: Number(best.price) || 0 };
-          return { produto: it.descricao, qtd, preco: 0 };
+          if (best && bestScore > 0) return { produto: best.name, qtd, preco: Number(best.price) || 0, origem };
+          return { produto: it.descricao, qtd, preco: 0, origem };
         });
       },
       placeOrder: async input => {

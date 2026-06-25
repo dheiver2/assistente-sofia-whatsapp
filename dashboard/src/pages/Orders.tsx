@@ -298,6 +298,9 @@ export function Orders() {
                     </td>
                     <td>
                       <span className="ord-items-count"><Package size={13} /> {o.items.length}</span>
+                      {o.items.some(i => i.origem === 'recomendacao') && (
+                        <span className="ord-reco-badge" title="Inclui item vindo de recomendação da IA">💡</span>
+                      )}
                       <span className="ord-items-preview">{o.items.slice(0, 2).map(i => i.produto).join(', ')}{o.items.length > 2 ? '…' : ''}</span>
                     </td>
                     <td className="ord-total">{brl(o.total)}</td>
@@ -348,7 +351,10 @@ export function Orders() {
                 {selected.items.map((it, i) => (
                   <li key={i}>
                     <span className="ord-item-qty">{it.qtd}×</span>
-                    <span className="ord-item-name">{it.produto}</span>
+                    <span className="ord-item-name">
+                      {it.produto}
+                      {it.origem === 'recomendacao' && <span className="ord-reco-tag" title="Veio de uma recomendação da IA">💡 recomendado</span>}
+                    </span>
                     <span className="ord-item-price">{brl(it.preco)}</span>
                   </li>
                 ))}

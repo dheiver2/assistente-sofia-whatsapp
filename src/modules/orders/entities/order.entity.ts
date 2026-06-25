@@ -8,6 +8,8 @@ export interface OrderItem {
   produto: string;
   qtd: number;
   preco: number;
+  /** Atribuição: 'pedido' = o cliente pediu direto; 'recomendacao' = veio de uma sugestão da IA. */
+  origem?: 'pedido' | 'recomendacao';
 }
 
 /**

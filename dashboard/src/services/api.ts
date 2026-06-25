@@ -519,6 +519,7 @@ export interface OrderItem {
   produto: string;
   qtd: number;
   preco: number;
+  origem?: 'pedido' | 'recomendacao';
 }
 
 export type OrderStatus = 'novo' | 'confirmado' | 'concluido' | 'cancelado';

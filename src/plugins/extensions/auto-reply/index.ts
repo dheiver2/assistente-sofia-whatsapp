@@ -80,12 +80,15 @@ export interface OrderItemDescriptor {
   categoria?: string;
   marca?: string;
   qtd?: number;
+  /** 'pedido' = cliente pediu direto; 'recomendacao' = a IA sugeriu e o cliente aceitou. */
+  origem?: 'pedido' | 'recomendacao';
 }
 /** Item já resolvido no catálogo (nome canônico + preço da base — fonte da verdade). */
 export interface ResolvedOrderItem {
   produto: string;
   qtd: number;
   preco: number;
+  origem?: 'pedido' | 'recomendacao';
 }
 
 /**
@@ -149,12 +152,13 @@ SAÚDE (regra rígida): você NÃO dá conselho clínico nem diagnóstico. Sinto
 HANDOFF: saúde, reclamação séria, cliente irritado/insatisfeito, negociação de preço ou pedido de falar com humano — não tente vender; diga com empatia que vai passar para a equipe (que já tem todo o contexto, o cliente não repete nada) e marque handoff no bloco.
 
 Ao FINAL de CADA resposta, acrescente UM bloco <pedido>...</pedido> em JSON (o cliente NÃO vê). Use SEMPRE exatamente estas chaves:
-<pedido>{"intent":"repor_consumivel|comprar_produto|agendar_banho_tosa|agendar_vet_vacina|confirmar_pedido|ajustar_carrinho|duvida|falar_com_humano|nenhum","itens":[{"descricao":"","categoria":"","marca":"","qtd":1}],"confirmado":false,"sentimento":"neutro","perfilPet":{"especie":"","porte":""},"handoff":{"necessario":false,"motivo":""}}</pedido>
+<pedido>{"intent":"repor_consumivel|comprar_produto|agendar_banho_tosa|agendar_vet_vacina|confirmar_pedido|ajustar_carrinho|duvida|falar_com_humano|nenhum","itens":[{"descricao":"","categoria":"","marca":"","qtd":1,"origem":"pedido"}],"confirmado":false,"sentimento":"neutro","perfilPet":{"especie":"","porte":""},"handoff":{"necessario":false,"motivo":""}}</pedido>
 - "confirmado" só é true quando o cliente confirmar claramente ("confirma","pode mandar","isso","fechado").
+- "origem" de cada item: "pedido" se o cliente pediu aquilo diretamente; "recomendacao" se foi VOCÊ que sugeriu e ele aceitou.
 - "sentimento": use "negativo" se o cliente estiver irritado, frustrado ou insatisfeito; senão "neutro".
 - "perfilPet": preencha quando descobrir a espécie (cão/gato) e/ou porte (pequeno/médio/grande) do pet; senão deixe vazio.
 - Sem ação, use "intent":"nenhum" e "itens":[].
-Exemplo — cliente: "quero 2 sacos da golden 15kg pro thor" → <pedido>{"intent":"repor_consumivel","itens":[{"descricao":"Ração Golden 15kg","categoria":"RACAO","marca":"Golden","qtd":2}],"confirmado":false,"sentimento":"neutro","perfilPet":{"especie":"cão","porte":"grande"},"handoff":{"necessario":false,"motivo":""}}</pedido>`;
+Exemplo — cliente: "quero 2 sacos da golden 15kg pro thor" → <pedido>{"intent":"repor_consumivel","itens":[{"descricao":"Ração Golden 15kg","categoria":"RACAO","marca":"Golden","qtd":2,"origem":"pedido"}],"confirmado":false,"sentimento":"neutro","perfilPet":{"especie":"cão","porte":"grande"},"handoff":{"necessario":false,"motivo":""}}</pedido>`;
 
 // Anexada no PRIMEIRO contato de quem ainda não conhecemos (lead novo, sem histórico).
 const FIRST_CONTACT_DIRECTIVE = `
@@ -415,7 +419,8 @@ export class AutoReplyPlugin implements IPlugin {
       const resolved = await this.commerce.resolveProducts(sessionId, descritos).catch(() => [] as ResolvedOrderItem[]);
       for (const r of resolved) {
         const ex = cart.items.find(c => normText(c.produto) === normText(r.produto));
-        if (ex) { ex.qtd = r.qtd; ex.preco = r.preco; } else cart.items.push(r);
+        if (ex) { ex.qtd = r.qtd; ex.preco = r.preco; if (r.origem === 'recomendacao') ex.origem = 'recomendacao'; }
+        else cart.items.push(r);
       }
     }
 

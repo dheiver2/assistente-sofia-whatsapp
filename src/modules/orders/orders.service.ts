@@ -29,6 +29,9 @@ export class OrdersService {
 
   /** Payload comum para WebSocket e webhook (ERP/PDV/BI da loja). */
   private orderPayload(o: Order): Record<string, unknown> {
+    const recommendedTotal = (o.items ?? [])
+      .filter(i => i.origem === 'recomendacao')
+      .reduce((s, i) => s + (Number(i.qtd) || 0) * (Number(i.preco) || 0), 0);
     return {
       orderId: o.id,
       phone: o.phone,
@@ -41,6 +44,9 @@ export class OrdersService {
       reference: o.reference,
       placedAt: o.placedAt,
       createdAt: o.createdAt,
+      // Atribuição da jornada por recomendação:
+      hasRecommendation: recommendedTotal > 0,
+      recommendedTotal: +recommendedTotal.toFixed(2),
     };
   }
 
@@ -140,7 +146,9 @@ export class OrdersService {
   async appendItems(id: string, items: OrderItem[]): Promise<Order> {
     const order = await this.findById(id);
     const merged = [...(order.items ?? [])];
-    for (const it of items.filter(i => i && i.produto)) {
+    for (const raw of items.filter(i => i && i.produto)) {
+      // Itens somados após o fechamento = upsell aceito → atribuídos à recomendação da IA.
+      const it: OrderItem = { ...raw, origem: raw.origem ?? 'recomendacao' };
       const ex = merged.find(m => m.produto.toLowerCase() === it.produto.toLowerCase());
       if (ex) ex.qtd += it.qtd;
       else merged.push(it);

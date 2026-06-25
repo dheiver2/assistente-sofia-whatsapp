@@ -24,6 +24,17 @@
   margin-right: 8px;
 }
 .ord-items-preview { color: var(--text-muted, #888); font-size: 0.82rem; }
+.ord-reco-badge { margin-right: 6px; font-size: 0.82rem; }
+.ord-reco-tag {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--primary, #ff7a1a) 16%, transparent);
+  color: var(--primary, #ff7a1a);
+  white-space: nowrap;
+}
 .ord-total { font-weight: 700; white-space: nowrap; }
 
 /* Status badges */
