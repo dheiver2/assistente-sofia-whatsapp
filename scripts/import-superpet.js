@@ -28,16 +28,22 @@ function toWa(raw) {
 }
 const money = v => { const n = parseFloat(String(v || '').replace(/\./g, '').replace(',', '.')); return isFinite(n) ? n : 0; };
 const brl = n => 'R$ ' + n.toFixed(2).replace('.', ',');
-// Data do BI: aceita "14/03/2026" (string) OU número de série do Excel (ex.: 46145).
-function parseDate(s) {
-  if (typeof s === 'number' && isFinite(s) && s > 20000) {
-    // Serial do Excel: dias desde 1899-12-30.
-    return new Date(Date.UTC(1899, 11, 30) + Math.round(s) * 86400000);
-  }
-  const m = String(s || '').match(/(\d{2})\/(\d{2})\/(\d{4})/);
-  if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
-  const n = Number(s);
-  if (isFinite(n) && n > 20000) return new Date(Date.UTC(1899, 11, 30) + Math.round(n) * 86400000);
+// Resolução de data do BI. A coluna "Data" é inconsistente: parte é texto "DD/MM/YYYY" (correto) e
+// parte é data serial do Excel COM DIA E MÊS TROCADOS na origem (vira datas futuras erradas). A
+// "Data Pagamento" é um timestamp real e confiável (presente em ~98% das linhas) → usamos ela primeiro.
+const asDate = v => (v instanceof Date && !isNaN(v) ? v : null);
+const strDate = s => { const m = String(s || '').match(/(\d{2})\/(\d{2})\/(\d{4})/); return m ? new Date(+m[3], +m[2] - 1, +m[1]) : null; };
+const dayOnly = d => new Date(d.getFullYear(), d.getMonth(), d.getDate());
+function resolveRowDate(r) {
+  // 1) Data Pagamento (fonte confiável)
+  const pg = asDate(r['Data Pagamento']) || strDate(r['Data Pagamento']);
+  if (pg) return dayOnly(pg);
+  // 2) "Data" como texto DD/MM/YYYY (correto)
+  const s = strDate(r['Data']);
+  if (s) return s;
+  // 3) "Data" como data serial: dia<->mês trocados na origem → corrige
+  const d = asDate(r['Data']);
+  if (d) return new Date(d.getFullYear(), d.getDate() - 1, d.getMonth() + 1);
   return null;
 }
 const fmtDate = d => d ? `${String(d.getDate()).padStart(2, '0')}/${String(d.getMonth() + 1).padStart(2, '0')}/${d.getFullYear()}` : null;
@@ -63,12 +69,12 @@ function inferPet(productNames) {
 const CONSUMIVEIS = ['RACAO', 'MEDICAMENTO', 'HIGIENE', 'PETISCO', 'AREIA'];
 const isConsumivel = grupoUpper => CONSUMIVEIS.some(k => grupoUpper.includes(k));
 
-const wb = read(fs.readFileSync(XLSX));
+const wb = read(fs.readFileSync(XLSX), { cellDates: true });
 const rows = utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { defval: '' });
 
 // Data de referência = última data presente no relatório (para julgar "está na hora de repor").
 let refDate = null;
-for (const r of rows) { const d = parseDate(r['Data']); if (d && (!refDate || d > refDate)) refDate = d; }
+for (const r of rows) { const d = resolveRowDate(r); if (d && (!refDate || d > refDate)) refDate = d; }
 
 const custs = {}; // phone -> agg
 const prods = {}; // produto -> agg
@@ -79,7 +85,7 @@ for (const r of rows) {
   const produto = String(r['Produto'] || '').trim();
   const grupo = titleCase(r['Grupo Linha']);
   const grupoUp = upper(r['Grupo Linha']);
-  const data = parseDate(r['Data']);
+  const data = resolveRowDate(r);
   const fab = String(r['Fabricante'] || '').trim();
   const total = money(r['Total Item']);
 
