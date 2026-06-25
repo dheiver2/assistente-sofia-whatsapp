@@ -70,6 +70,10 @@ export interface SessionAi {
 /** Resolve a sessão (nome + config de IA) a partir do seu id (UUID). Injetado pelo registrar. */
 export type SessionResolver = (sessionId: string) => Promise<{ name: string | null; ai: SessionAi | null }>;
 
+/** Resolve o contexto do cliente (histórico/perfil/cadência) por sessão+telefone, para a IA
+ *  personalizar a conversa e recomendar com base no que a pessoa já comprou. */
+export type ContactResolver = (sessionId: string, phone: string) => Promise<{ name: string | null; aiContext: string } | null>;
+
 function isWithinBusinessHours(bh: NonNullable<SessionAi['businessHours']>): boolean {
   if (!bh.enabled) return true;
   const tz = bh.timezone ?? 'America/Sao_Paulo';
@@ -126,7 +130,10 @@ export class AutoReplyPlugin implements IPlugin {
   private readonly aiEngaged = new Map<string, number>();
   private cleanupTimer?: ReturnType<typeof setInterval>;
 
-  constructor(private readonly resolveSession?: SessionResolver) {}
+  constructor(
+    private readonly resolveSession?: SessionResolver,
+    private readonly resolveContact?: ContactResolver,
+  ) {}
 
   /** Registra um texto enviado pela própria IA (para distinguir do humano no eco fromMe). */
   private recordAiSent(key: string, text: string): void {
@@ -401,9 +408,24 @@ export class AutoReplyPlugin implements IPlugin {
       const history = await this.loadHistory(context, key);
       const firstContact = history.length === 0;
 
+      // Cliente conhecido: injeta o histórico/perfil para a IA personalizar e recomendar na conversa.
+      let systemPrompt = profile.systemPrompt;
+      try {
+        const phone = chatId.split('@')[0].replace(/\D/g, '');
+        const cust = this.resolveContact && phone ? await this.resolveContact(sessionId, phone) : null;
+        if (cust?.aiContext) {
+          systemPrompt +=
+            `\n\nCLIENTE QUE ESTÁ FALANDO AGORA (dados reais do histórico — use com naturalidade para ` +
+            `personalizar o atendimento e recomendar o que faz sentido; NÃO despeje tudo de uma vez, ` +
+            `traga no máximo UMA sugestão por mensagem e só quando vier a propósito):\n${cust.aiContext}`;
+        }
+      } catch {
+        /* segue sem contexto do cliente */
+      }
+
       let reply: string;
       try {
-        reply = await this.generate(profile.model, profile.systemPrompt, history, userText);
+        reply = await this.generate(profile.model, systemPrompt, history, userText);
       } catch (aiErr) {
         context.logger.warn('AI generation failed; sending fallback', { error: String(aiErr) });
         this.recordAiSent(key, FALLBACK);

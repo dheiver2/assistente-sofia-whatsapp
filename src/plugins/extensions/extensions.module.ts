@@ -5,6 +5,7 @@ import { PluginLoaderService, PluginManifest, PluginType } from '../../core/plug
 import { AutoReplyPlugin, SessionAi } from './auto-reply';
 import { TranslationPlugin } from './translation';
 import { Session } from '../../modules/session/entities/session.entity';
+import { Contact } from '../../modules/contacts/entities/contact.entity';
 import { createLogger } from '../../common/services/logger.service';
 
 /**
@@ -19,6 +20,7 @@ export class ExtensionsRegistrar implements OnModuleInit {
   constructor(
     private readonly pluginLoader: PluginLoaderService,
     @InjectRepository(Session, 'data') private readonly sessionRepo: Repository<Session>,
+    @InjectRepository(Contact, 'data') private readonly contactRepo: Repository<Contact>,
   ) {}
 
   async onModuleInit(): Promise<void> {
@@ -39,7 +41,15 @@ export class ExtensionsRegistrar implements OnModuleInit {
       const ai = row?.config?.ai as SessionAi | undefined;
       return { name: row?.name ?? null, ai: ai ?? null };
     };
-    this.pluginLoader.registerBuiltInPlugin(autoReplyManifest, new AutoReplyPlugin(resolveSession));
+    // Resolve o contexto do cliente (perfil/histórico/cadência já calculados em attributes.aiContext)
+    // por sessão+telefone, para a IA da conversa recomendar com base no que a pessoa já comprou.
+    const resolveContact = async (sessionId: string, phone: string): Promise<{ name: string | null; aiContext: string } | null> => {
+      const c = await this.contactRepo.findOne({ where: { sessionId, phone }, select: ['name', 'attributes'] });
+      const aiContext = c?.attributes?.['aiContext'];
+      if (typeof aiContext !== 'string' || !aiContext.trim()) return null;
+      return { name: c?.name ?? null, aiContext };
+    };
+    this.pluginLoader.registerBuiltInPlugin(autoReplyManifest, new AutoReplyPlugin(resolveSession, resolveContact));
     this.logger.log('Auto-reply plugin registered — enabling automatically');
     await this.pluginLoader.enablePlugin('auto-reply');
 
@@ -92,7 +102,7 @@ export class ExtensionsRegistrar implements OnModuleInit {
 }
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Session], 'data')],
+  imports: [TypeOrmModule.forFeature([Session, Contact], 'data')],
   providers: [ExtensionsRegistrar],
 })
 export class ExtensionsModule {}
