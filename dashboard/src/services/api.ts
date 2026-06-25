@@ -539,12 +539,18 @@ export interface Order {
 }
 
 export const ordersApi = {
-  list: (sessionId: string, params: { status?: string; search?: string; take?: number } = {}) =>
+  list: (
+    sessionId: string,
+    params: { status?: string; source?: string; search?: string; sort?: string; order?: string; take?: number } = {},
+  ) =>
     request<Order[]>(
       `/orders?${new URLSearchParams({
         sessionId,
         ...(params.status ? { status: params.status } : {}),
+        ...(params.source ? { source: params.source } : {}),
         ...(params.search ? { search: params.search } : {}),
+        ...(params.sort ? { sort: params.sort } : {}),
+        ...(params.order ? { order: params.order } : {}),
         ...(params.take ? { take: String(params.take) } : {}),
       }).toString()}`,
     ),

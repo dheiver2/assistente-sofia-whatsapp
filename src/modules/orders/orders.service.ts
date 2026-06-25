@@ -61,15 +61,27 @@ export class OrdersService {
     return saved;
   }
 
-  list(sessionId: string, opts: { status?: string; search?: string; take?: number } = {}): Promise<Order[]> {
+  list(
+    sessionId: string,
+    opts: { status?: string; source?: string; search?: string; sort?: string; order?: string; take?: number } = {},
+  ): Promise<Order[]> {
     const qb = this.repo.createQueryBuilder('o').where('o.sessionId = :sid', { sid: sessionId });
     if (opts.status) qb.andWhere('o.status = :st', { st: opts.status });
+    if (opts.source) qb.andWhere('o.source = :src', { src: opts.source });
     if (opts.search) qb.andWhere('(o.customerName LIKE :s OR o.phone LIKE :s)', { s: `%${opts.search}%` });
-    return qb
-      .orderBy('o.placedAt', 'DESC')
-      .addOrderBy('o.createdAt', 'DESC')
-      .limit(Math.min(opts.take ?? 100, 500))
-      .getMany();
+
+    // Ordenação: só colunas permitidas (evita injeção). Default: mais recentes.
+    const sortCols: Record<string, string> = {
+      placedAt: 'o.placedAt',
+      total: 'o.total',
+      customerName: 'o.customerName',
+      status: 'o.status',
+    };
+    const col = sortCols[opts.sort ?? 'placedAt'] ?? 'o.placedAt';
+    const dir: 'ASC' | 'DESC' = String(opts.order).toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    qb.orderBy(col, dir).addOrderBy('o.createdAt', 'DESC');
+
+    return qb.limit(Math.min(opts.take ?? 100, 500)).getMany();
   }
 
   findByPhone(sessionId: string, phone: string): Promise<Order[]> {

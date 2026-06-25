@@ -1,8 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import {
   Loader2, Search, ShoppingBag, Package, X, Phone, CheckCircle2, Clock, XCircle, Receipt, TrendingUp, Trash2,
+  ChevronUp, ChevronDown, ChevronsUpDown,
 } from 'lucide-react';
 import { sessionApi, ordersApi, type Session, type Order, type OrderStatus } from '../services/api';
+
+type SortField = 'placedAt' | 'total' | 'customerName' | 'status';
+type SortDir = 'ASC' | 'DESC';
 import { useDocumentTitle } from '../hooks/useDocumentTitle';
 import { useToast } from '../components/Toast';
 import { useWebSocket } from '../hooks/useWebSocket';
@@ -36,6 +40,13 @@ function avatarColor(seed: string): string {
   return `hsl(${h}, 55%, 55%)`;
 }
 
+function SortIcon({ field, sortField, sortDir }: { field: SortField; sortField: SortField; sortDir: SortDir }) {
+  if (field !== sortField) return <ChevronsUpDown size={13} className="ord-sort-icon ord-sort-idle" />;
+  return sortDir === 'ASC'
+    ? <ChevronUp size={13} className="ord-sort-icon" />
+    : <ChevronDown size={13} className="ord-sort-icon" />;
+}
+
 function StatusBadge({ status }: { status: OrderStatus }) {
   const meta = STATUS_META[status] ?? STATUS_META.novo;
   const Icon = meta.icon;
@@ -56,6 +67,9 @@ export function Orders() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
+  const [sourceFilter, setSourceFilter] = useState('');
+  const [sortField, setSortField] = useState<SortField>('placedAt');
+  const [sortDir, setSortDir] = useState<SortDir>('DESC');
 
   const [selected, setSelected] = useState<Order | null>(null);
   const [custOrders, setCustOrders] = useState<Order[]>([]);
@@ -87,33 +101,45 @@ export function Orders() {
   }, []);
 
   const loadOrders = useCallback(
-    (sid: string, search: string, status: string) => {
+    (sid: string) => {
       if (!sid) return;
       setLoading(true);
       ordersApi
-        .list(sid, { search: search || undefined, status: status || undefined, take: 300 })
+        .list(sid, {
+          search: searchTerm || undefined,
+          status: statusFilter || undefined,
+          source: sourceFilter || undefined,
+          sort: sortField,
+          order: sortDir,
+          take: 300,
+        })
         .then(setOrders)
         .catch(err => toast.error('Erro ao carregar pedidos', err instanceof Error ? err.message : undefined))
         .finally(() => setLoading(false));
     },
-    [toast],
+    [toast, searchTerm, statusFilter, sourceFilter, sortField, sortDir],
   );
 
   useEffect(() => {
     if (!sessionId) return;
     if (searchTimer.current) clearTimeout(searchTimer.current);
-    searchTimer.current = setTimeout(() => loadOrders(sessionId, searchTerm, statusFilter), 300);
+    searchTimer.current = setTimeout(() => loadOrders(sessionId), 300);
     return () => { if (searchTimer.current) clearTimeout(searchTimer.current); };
-  }, [sessionId, searchTerm, statusFilter, loadOrders]);
+  }, [sessionId, loadOrders]);
 
   // Notificação em tempo real: novo pedido fechado na conversa.
   useWebSocket({
     onOrderCreated: ev => {
       if (ev.sessionId !== sessionId) return;
       toast.success('Novo pedido recebido!', `${ev.customerName || ev.phone} — ${brl(ev.total)} (${ev.itemCount} itens)`);
-      loadOrders(sessionId, searchTerm, statusFilter);
+      loadOrders(sessionId);
     },
   });
+
+  function toggleSort(field: SortField) {
+    if (sortField === field) setSortDir(d => (d === 'ASC' ? 'DESC' : 'ASC'));
+    else { setSortField(field); setSortDir(field === 'customerName' ? 'ASC' : 'DESC'); }
+  }
 
   const novos = useMemo(() => orders.filter(o => o.status === 'novo').length, [orders]);
 
@@ -187,6 +213,29 @@ export function Orders() {
           <option value="cancelado">Cancelados</option>
         </select>
 
+        <select className="ct-filter-select" value={sourceFilter} onChange={e => setSourceFilter(e.target.value)}>
+          <option value="">Todas as origens</option>
+          <option value="conversa">Pela IA (conversa)</option>
+          <option value="historico-bi">Histórico</option>
+          <option value="manual">Manual</option>
+        </select>
+
+        <select
+          className="ct-filter-select"
+          value={`${sortField}:${sortDir}`}
+          onChange={e => {
+            const [f, d] = e.target.value.split(':');
+            setSortField(f as SortField);
+            setSortDir(d as SortDir);
+          }}
+        >
+          <option value="placedAt:DESC">Mais recentes</option>
+          <option value="placedAt:ASC">Mais antigos</option>
+          <option value="total:DESC">Maior valor</option>
+          <option value="total:ASC">Menor valor</option>
+          <option value="customerName:ASC">Cliente (A–Z)</option>
+        </select>
+
         <div className="ct-toolbar-spacer" />
 
         <select className="ct-session-select" value={sessionId} onChange={e => setSessionId(e.target.value)}>
@@ -213,11 +262,19 @@ export function Orders() {
             <table className="ct-table ord-table">
               <thead>
                 <tr>
-                  <th>Cliente</th>
+                  <th className="ord-th-sort" onClick={() => toggleSort('customerName')}>
+                    Cliente <SortIcon field="customerName" sortField={sortField} sortDir={sortDir} />
+                  </th>
                   <th>Itens</th>
-                  <th>Total</th>
-                  <th>Status</th>
-                  <th>Data</th>
+                  <th className="ord-th-sort" onClick={() => toggleSort('total')}>
+                    Total <SortIcon field="total" sortField={sortField} sortDir={sortDir} />
+                  </th>
+                  <th className="ord-th-sort" onClick={() => toggleSort('status')}>
+                    Status <SortIcon field="status" sortField={sortField} sortDir={sortDir} />
+                  </th>
+                  <th className="ord-th-sort" onClick={() => toggleSort('placedAt')}>
+                    Data <SortIcon field="placedAt" sortField={sortField} sortDir={sortDir} />
+                  </th>
                   <th></th>
                 </tr>
               </thead>

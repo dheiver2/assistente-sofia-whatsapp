@@ -11,14 +11,17 @@ export class OrdersController {
   constructor(private readonly svc: OrdersService) {}
 
   @Get()
-  @ApiOperation({ summary: 'Lista pedidos da sessão (filtra por status e busca por nome/telefone)' })
+  @ApiOperation({ summary: 'Lista pedidos da sessão (filtra por status/origem/busca e ordena)' })
   list(
     @Query('sessionId') sessionId: string,
     @Query('status') status?: string,
+    @Query('source') source?: string,
     @Query('search') search?: string,
+    @Query('sort') sort?: string,
+    @Query('order') order?: string,
     @Query('take') take?: string,
   ): Promise<Order[]> {
-    return this.svc.list(sessionId, { status, search, take: take ? parseInt(take, 10) : undefined });
+    return this.svc.list(sessionId, { status, source, search, sort, order, take: take ? parseInt(take, 10) : undefined });
   }
 
   @Get('stats')

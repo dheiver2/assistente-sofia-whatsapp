@@ -2,6 +2,16 @@
 
 .ord-table td { vertical-align: middle; }
 
+/* Cabeçalhos ordenáveis */
+.ord-th-sort {
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.ord-th-sort:hover { color: var(--primary, #ff7a1a); }
+.ord-sort-icon { vertical-align: -2px; color: var(--primary, #ff7a1a); }
+.ord-sort-idle { color: var(--text-muted, #aaa); opacity: 0.6; }
+
 .ord-row { cursor: pointer; }
 .ord-row-new { background: color-mix(in srgb, var(--primary, #ff7a1a) 7%, transparent); }
 .ord-row-new:hover { background: color-mix(in srgb, var(--primary, #ff7a1a) 12%, transparent); }
